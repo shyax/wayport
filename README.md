@@ -1,4 +1,4 @@
-# Port Forwarder
+# Porthole
 
 A lightweight, cross-platform desktop app for managing SSH port-forwarding tunnels. Save connection profiles, connect with one click, and share configs with your team.
 
@@ -16,7 +16,7 @@ A lightweight, cross-platform desktop app for managing SSH port-forwarding tunne
 - **Frontend:** React 19 + TypeScript + Tailwind CSS v4
 - **Backend:** Rust + Tauri v2.10
 - **Process Management:** System `ssh` binary (honors `~/.ssh/config`, SSH agent, all key formats)
-- **Data Persistence:** JSON-based configuration in `~/.config/Port Forwarder/`
+- **Data Persistence:** JSON-based configuration in `~/.config/Porthole/`
 
 ## Getting Started
 
@@ -138,7 +138,7 @@ ssh -i <key> -L <local>:<remote_host>:<remote_port> -N \
 }
 ```
 
-Profiles are persisted to `~/.config/Port Forwarder/config.json` and can be exported/imported as JSON.
+Profiles are persisted to `~/.config/Porthole/config.json` and can be exported/imported as JSON.
 
 ## License
 

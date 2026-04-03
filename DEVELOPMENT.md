@@ -24,7 +24,7 @@ npm run build
 npm run package:mac
 ```
 
-Produces `Port Forwarder.dmg` in `src-tauri/target/release/bundle/dmg/`.
+Produces `Porthole.dmg` in `src-tauri/target/release/bundle/dmg/`.
 
 ### Windows
 

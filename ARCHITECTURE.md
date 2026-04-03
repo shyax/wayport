@@ -2,7 +2,7 @@
 
 ## High-Level Overview
 
-Port Forwarder is a desktop application that manages SSH port-forwarding tunnels. It consists of:
+Porthole is a desktop application that manages SSH port-forwarding tunnels. It consists of:
 
 1. **Tauri Framework** — Bridges Rust backend and React frontend
 2. **Rust Backend** — Spawns and manages SSH processes, persists config
@@ -10,7 +10,7 @@ Port Forwarder is a desktop application that manages SSH port-forwarding tunnels
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Port Forwarder                       │
+│                        Porthole                       │
 ├─────────────────────────────────────────────────────────────┤
 │                      React Frontend                         │
 │  (src/App.tsx, src/components/*.tsx)                       │
@@ -54,7 +54,7 @@ Generate UUID, timestamp
   ↓
 store.save_profiles([...existing, new])
   ↓
-save to ~/.config/Port Forwarder/config.json
+save to ~/.config/Porthole/config.json
   ↓
 Return profile to frontend
   ↓
@@ -137,7 +137,7 @@ All mutation is protected by `RwLock`.
 
 ### Persistent Storage
 
-JSON file at `~/.config/Port Forwarder/config.json`:
+JSON file at `~/.config/Porthole/config.json`:
 
 ```json
 {
