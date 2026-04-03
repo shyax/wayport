@@ -1,7 +1,7 @@
-use tauri::{State, AppHandle, Window, Emitter};
+use tauri::{State, AppHandle, Emitter};
 use uuid::Uuid;
 use chrono::Utc;
-use crate::types::{ConnectionProfile, TunnelState};
+use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, Workspace};
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
 
@@ -104,13 +104,6 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>) -> std::collectio
 }
 
 #[tauri::command]
-pub async fn select_key_file(_window: Window) -> Result<String, String> {
-    // Simple file picker using native OS dialog
-    // For now, return an error prompting user to implement file picker
-    Err("File picker not yet implemented. Please type the path manually.".to_string())
-}
-
-#[tauri::command]
 pub fn check_ssh() -> Result<std::collections::HashMap<String, String>, String> {
     match std::process::Command::new("ssh")
         .arg("-V")
@@ -143,7 +136,7 @@ pub async fn export_profiles(store: State<'_, Store>) -> Result<String, String> 
 
     // Save to Downloads folder with timestamp
     let downloads = dirs::download_dir().ok_or("Could not find Downloads folder")?;
-    let filename = format!("port-forwarder-config-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
+    let filename = format!("porthole-config-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
     let path = downloads.join(filename);
 
     std::fs::write(&path, export_data.to_string())
@@ -154,12 +147,12 @@ pub async fn export_profiles(store: State<'_, Store>) -> Result<String, String> 
 
 #[tauri::command]
 pub async fn import_profiles(store: State<'_, Store>) -> Result<u32, String> {
-    // For now, we'll look for port-forwarder-config.json in the Downloads folder
+    // For now, we'll look for porthole-config.json in the Downloads folder
     let downloads = dirs::download_dir().ok_or("Could not find Downloads folder")?;
-    let path = downloads.join("port-forwarder-config.json");
+    let path = downloads.join("porthole-config.json");
 
     if !path.exists() {
-        return Err("No port-forwarder-config.json found in Downloads folder".to_string());
+        return Err("No porthole-config.json found in Downloads folder".to_string());
     }
 
     let content = std::fs::read_to_string(&path)
@@ -187,4 +180,114 @@ pub async fn import_profiles(store: State<'_, Store>) -> Result<u32, String> {
         .map_err(|e| e.to_string())?;
 
     Ok(imported_count)
+}
+
+// ---------------------------------------------------------------------------
+// Workspace commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_workspaces(store: State<Store>) -> Vec<Workspace> {
+    store.database().get_workspaces()
+}
+
+// ---------------------------------------------------------------------------
+// Folder commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_folders(workspace_id: String, store: State<Store>) -> Vec<Folder> {
+    store.database().get_folders(&workspace_id)
+}
+
+#[tauri::command]
+pub fn create_folder(folder: Folder, store: State<Store>) -> Result<Folder, String> {
+    let mut folder = folder;
+    folder.id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    folder.created_at = now.clone();
+    folder.updated_at = now;
+    store.database().create_folder(&folder)?;
+    Ok(folder)
+}
+
+#[tauri::command]
+pub fn update_folder(folder: Folder, store: State<Store>) -> Result<Folder, String> {
+    let mut folder = folder;
+    folder.updated_at = Utc::now().to_rfc3339();
+    store.database().update_folder(&folder)?;
+    Ok(folder)
+}
+
+#[tauri::command]
+pub fn delete_folder(id: String, store: State<Store>) -> Result<(), String> {
+    store.database().delete_folder(&id)
+}
+
+// ---------------------------------------------------------------------------
+// Environment commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_environments(workspace_id: String, store: State<Store>) -> Vec<Environment> {
+    store.database().get_environments(&workspace_id)
+}
+
+#[tauri::command]
+pub fn create_environment(environment: Environment, store: State<Store>) -> Result<Environment, String> {
+    let mut env = environment;
+    env.id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    env.created_at = now.clone();
+    env.updated_at = now;
+    store.database().create_environment(&env)?;
+    Ok(env)
+}
+
+#[tauri::command]
+pub fn update_environment(environment: Environment, store: State<Store>) -> Result<Environment, String> {
+    let mut env = environment;
+    env.updated_at = Utc::now().to_rfc3339();
+    store.database().update_environment(&env)?;
+    Ok(env)
+}
+
+#[tauri::command]
+pub fn delete_environment(id: String, store: State<Store>) -> Result<(), String> {
+    store.database().delete_environment(&id)
+}
+
+// ---------------------------------------------------------------------------
+// History commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_history(workspace_id: String, limit: Option<u32>, store: State<Store>) -> Vec<HistoryEntry> {
+    store.database().get_history(&workspace_id, limit.unwrap_or(100))
+}
+
+#[tauri::command]
+pub fn record_connection_event(entry: HistoryEntry, store: State<Store>) -> Result<(), String> {
+    let mut entry = entry;
+    if entry.id.is_empty() {
+        entry.id = Uuid::new_v4().to_string();
+    }
+    if entry.created_at.is_empty() {
+        entry.created_at = Utc::now().to_rfc3339();
+    }
+    store.database().record_history(&entry)
+}
+
+// ---------------------------------------------------------------------------
+// Preference commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_preference(key: String, store: State<Store>) -> Option<String> {
+    store.database().get_preference(&key)
+}
+
+#[tauri::command]
+pub fn set_preference(key: String, value: String, store: State<Store>) -> Result<(), String> {
+    store.database().set_preference(&key, &value)
 }
