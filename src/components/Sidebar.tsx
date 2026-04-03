@@ -1,75 +1,149 @@
-import { Plus, Download, Upload } from "lucide-react";
-import { ConnectionItem } from "./ConnectionItem";
-import type { ConnectionProfile, TunnelState } from "../lib/types";
+import {
+  Plus,
+  Download,
+  Upload,
+  Cable,
+  Wrench,
+  Clock,
+  Zap,
+} from "lucide-react";
+import { FolderTree } from "./FolderTree";
+import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
+import type { ConnectionProfile, Folder, TunnelState } from "../lib/types";
+
+export type SidebarView =
+  | "connections"
+  | "port-tools"
+  | "history"
+  | "environments"
+  | "settings";
 
 interface SidebarProps {
   profiles: ConnectionProfile[];
+  folders: Folder[];
   tunnelStates: Record<string, TunnelState>;
   selectedId: string | null;
+  currentView: SidebarView;
+  workspaceId: string;
   onSelect: (id: string) => void;
   onAdd: () => void;
   onImport: () => void;
   onExport: () => void;
+  onSwitchView: (view: SidebarView) => void;
 }
+
+const NAV_ITEMS: { id: SidebarView; icon: typeof Cable; label: string }[] = [
+  { id: "connections", icon: Cable, label: "Connections" },
+  { id: "port-tools", icon: Wrench, label: "Port Tools" },
+  { id: "environments", icon: Zap, label: "Environments" },
+  { id: "history", icon: Clock, label: "History" },
+];
 
 export function Sidebar({
   profiles,
+  folders,
   tunnelStates,
   selectedId,
+  currentView,
+  workspaceId,
   onSelect,
   onAdd,
   onImport,
   onExport,
+  onSwitchView,
 }: SidebarProps) {
+  const activeCount = Object.values(tunnelStates).filter(
+    (s) => s.status === "connected",
+  ).length;
+
   return (
-    <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
-      <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Connections</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={onImport}
-            className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-            title="Import"
-          >
-            <Download size={16} />
-          </button>
-          <button
-            onClick={onExport}
-            className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-            title="Export"
-          >
-            <Upload size={16} />
-          </button>
-        </div>
+    <div className="flex h-full">
+      {/* Icon Rail */}
+      <div className="w-[52px] bg-rail border-r border-border flex flex-col items-center py-3 gap-1 flex-shrink-0">
+        {NAV_ITEMS.map(({ id, icon: Icon, label }) => {
+          const isActive = currentView === id;
+          return (
+            <button
+              key={id}
+              onClick={() => onSwitchView(id)}
+              className={`relative w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 group ${
+                isActive
+                  ? "bg-rail-active text-accent"
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-hover"
+              }`}
+              title={label}
+            >
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-rail-indicator rounded-r-full" />
+              )}
+              <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
+              {id === "connections" && activeCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-status-connected text-[9px] text-bg font-bold rounded-full flex items-center justify-center">
+                  {activeCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {profiles.length === 0 ? (
-          <div className="p-4 text-center text-slate-500 text-sm">
-            No connections yet
+      {/* Connection List Panel - only visible for connections view */}
+      {currentView === "connections" && (
+        <div className="w-64 bg-bg-elevated border-r border-border flex flex-col">
+          <div className="px-4 py-3 border-b border-border">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Connections
+              </h2>
+              <div className="flex gap-0.5">
+                <button
+                  onClick={onImport}
+                  className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
+                  title="Import connections"
+                >
+                  <Download size={13} />
+                </button>
+                <button
+                  onClick={onExport}
+                  className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
+                  title="Export connections"
+                >
+                  <Upload size={13} />
+                </button>
+              </div>
+            </div>
+            <EnvironmentSwitcher />
           </div>
-        ) : (
-          <div className="divide-y divide-slate-700">
-            {profiles.map((profile) => (
-              <ConnectionItem
-                key={profile.id}
-                profile={profile}
-                tunnelState={tunnelStates[profile.id]}
-                isSelected={profile.id === selectedId}
-                onSelect={() => onSelect(profile.id)}
+
+          <div className="flex-1 overflow-y-auto py-2 px-2">
+            {profiles.length === 0 && folders.length === 0 ? (
+              <div className="px-3 py-8 text-center">
+                <Cable size={20} className="text-text-muted mx-auto mb-2" />
+                <p className="text-[11px] text-text-muted">No connections yet</p>
+              </div>
+            ) : (
+              <FolderTree
+                folders={folders}
+                profiles={profiles}
+                tunnelStates={tunnelStates}
+                selectedId={selectedId}
+                workspaceId={workspaceId}
+                onSelectProfile={onSelect}
               />
-            ))}
+            )}
           </div>
-        )}
-      </div>
 
-      <button
-        onClick={onAdd}
-        className="m-4 flex items-center justify-center gap-2 w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition"
-      >
-        <Plus size={18} />
-        New Connection
-      </button>
+          <div className="p-3 border-t border-border">
+            <button
+              onClick={onAdd}
+              className="focus-ring flex items-center justify-center gap-2 w-full py-2 px-3 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-semibold cursor-pointer transition-colors duration-150"
+            >
+              <Plus size={15} />
+              New Connection
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

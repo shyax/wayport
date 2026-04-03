@@ -1,213 +1,214 @@
-import { useEffect, useReducer, useCallback } from "react";
-import { Sidebar } from "./components/Sidebar";
+import { useEffect, useCallback } from "react";
+import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { ConnectionDetail } from "./components/ConnectionDetail";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { StatusBar } from "./components/StatusBar";
 import { EmptyState } from "./components/EmptyState";
+import { PortUtilities } from "./components/PortUtilities";
+import { HistoryPanel } from "./components/HistoryPanel";
+import { EnvironmentEditor } from "./components/EnvironmentEditor";
+import { AuthGate } from "./components/AuthGate";
 import * as api from "./lib/api";
-import type {
-  ConnectionProfile,
-  NewConnectionProfile,
-  TunnelState,
-} from "./lib/types";
-
-interface AppState {
-  profiles: ConnectionProfile[];
-  tunnelStates: Record<string, TunnelState>;
-  selectedId: string | null;
-  showForm: boolean;
-  editingProfile: ConnectionProfile | null;
-}
-
-type Action =
-  | { type: "SET_PROFILES"; profiles: ConnectionProfile[] }
-  | { type: "SET_TUNNEL_STATES"; states: Record<string, TunnelState> }
-  | { type: "UPDATE_TUNNEL_STATE"; state: TunnelState }
-  | { type: "SELECT"; id: string | null }
-  | { type: "SHOW_FORM"; editing?: ConnectionProfile }
-  | { type: "HIDE_FORM" }
-  | { type: "ADD_PROFILE"; profile: ConnectionProfile }
-  | { type: "UPDATE_PROFILE"; profile: ConnectionProfile }
-  | { type: "REMOVE_PROFILE"; id: string };
-
-function reducer(state: AppState, action: Action): AppState {
-  switch (action.type) {
-    case "SET_PROFILES":
-      return { ...state, profiles: action.profiles };
-    case "SET_TUNNEL_STATES":
-      return { ...state, tunnelStates: action.states };
-    case "UPDATE_TUNNEL_STATE":
-      return {
-        ...state,
-        tunnelStates: {
-          ...state.tunnelStates,
-          [action.state.profile_id]: action.state,
-        },
-      };
-    case "SELECT":
-      return { ...state, selectedId: action.id, showForm: false };
-    case "SHOW_FORM":
-      return {
-        ...state,
-        showForm: true,
-        editingProfile: action.editing ?? null,
-      };
-    case "HIDE_FORM":
-      return { ...state, showForm: false, editingProfile: null };
-    case "ADD_PROFILE":
-      return {
-        ...state,
-        profiles: [...state.profiles, action.profile],
-        selectedId: action.profile.id,
-        showForm: false,
-        editingProfile: null,
-      };
-    case "UPDATE_PROFILE":
-      return {
-        ...state,
-        profiles: state.profiles.map((p) =>
-          p.id === action.profile.id ? action.profile : p,
-        ),
-        showForm: false,
-        editingProfile: null,
-      };
-    case "REMOVE_PROFILE":
-      return {
-        ...state,
-        profiles: state.profiles.filter((p) => p.id !== action.id),
-        selectedId:
-          state.selectedId === action.id ? null : state.selectedId,
-        tunnelStates: Object.fromEntries(
-          Object.entries(state.tunnelStates).filter(
-            ([k]) => k !== action.id,
-          ),
-        ),
-      };
-    default:
-      return state;
-  }
-}
-
-const initialState: AppState = {
-  profiles: [],
-  tunnelStates: {},
-  selectedId: null,
-  showForm: false,
-  editingProfile: null,
-};
+import { useProfileStore } from "./stores/profileStore";
+import { useWorkspaceStore } from "./stores/workspaceStore";
+import { useFolderStore } from "./stores/folderStore";
+import { useEnvironmentStore } from "./stores/environmentStore";
+import { useHistoryStore } from "./stores/historyStore";
+import type { ConnectionProfile, NewConnectionProfile } from "./lib/types";
+import { useState } from "react";
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [currentView, setCurrentView] = useState<SidebarView>("connections");
 
+  const {
+    profiles,
+    tunnelStates,
+    selectedId,
+    showForm,
+    editingProfile,
+    loadProfiles,
+    setTunnelStates,
+    updateTunnelState,
+    select,
+    showCreateForm,
+    showEditForm,
+    hideForm,
+    createProfile,
+    updateProfile,
+    deleteProfile,
+    connect,
+    disconnect,
+    importProfiles,
+    exportProfiles,
+  } = useProfileStore();
+
+  const { activeWorkspaceId, loadWorkspaces } = useWorkspaceStore();
+  const { folders, loadFolders } = useFolderStore();
+  const { loadEnvironments, getActiveVariables } = useEnvironmentStore();
+  const { recordEvent } = useHistoryStore();
+
+  // Initialize on mount
   useEffect(() => {
-    api.listProfiles().then((profiles) =>
-      dispatch({ type: "SET_PROFILES", profiles }),
-    );
-    api.getTunnelStates().then((states) =>
-      dispatch({ type: "SET_TUNNEL_STATES", states }),
-    );
+    loadWorkspaces();
+    loadProfiles();
+    loadFolders("local");
+    loadEnvironments("local");
 
-    const unlisten = api.onTunnelStateUpdate((tunnelState) => {
-      dispatch({ type: "UPDATE_TUNNEL_STATE", state: tunnelState });
-    });
+    api.getTunnelStates().then(setTunnelStates);
 
+    const unlisten = api.onTunnelStateUpdate(updateTunnelState);
     return () => {
       unlisten.then((fn) => fn());
     };
   }, []);
 
-  const selectedProfile = state.profiles.find(
-    (p) => p.id === state.selectedId,
-  );
-  const selectedTunnelState = state.selectedId
-    ? state.tunnelStates[state.selectedId]
-    : undefined;
+  const selectedProfile = profiles.find((p) => p.id === selectedId);
+  const selectedTunnelState = selectedId ? tunnelStates[selectedId] : undefined;
 
   const handleCreate = useCallback(
     async (data: NewConnectionProfile) => {
-      const profile = await api.createProfile(data);
-      dispatch({ type: "ADD_PROFILE", profile });
+      await createProfile(data);
     },
-    [],
+    [createProfile],
   );
 
   const handleUpdate = useCallback(
     async (data: ConnectionProfile) => {
-      const profile = await api.updateProfile(data);
-      dispatch({ type: "UPDATE_PROFILE", profile });
+      await updateProfile(data);
     },
-    [],
+    [updateProfile],
   );
 
-  const handleDelete = useCallback(async (id: string) => {
-    await api.stopTunnel(id).catch(() => {});
-    await api.deleteProfile(id);
-    dispatch({ type: "REMOVE_PROFILE", id });
+  const handleConnect = useCallback(
+    async (id: string) => {
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) return;
+
+      await connect(id);
+
+      // Record history
+      await recordEvent(
+        activeWorkspaceId,
+        id,
+        profile.name,
+        "connect",
+      );
+    },
+    [profiles, getActiveVariables, connect, recordEvent, activeWorkspaceId],
+  );
+
+  const handleDisconnect = useCallback(
+    async (id: string) => {
+      const profile = profiles.find((p) => p.id === id);
+      await disconnect(id);
+      if (profile) {
+        await recordEvent(
+          activeWorkspaceId,
+          id,
+          profile.name,
+          "disconnect",
+        );
+      }
+    },
+    [profiles, disconnect, recordEvent, activeWorkspaceId],
+  );
+
+  const handleSwitchView = useCallback((view: SidebarView) => {
+    setCurrentView(view);
   }, []);
 
-  const handleConnect = useCallback(async (id: string) => {
-    await api.startTunnel(id);
-  }, []);
-
-  const handleDisconnect = useCallback(async (id: string) => {
-    await api.stopTunnel(id);
-  }, []);
-
-  const handleImport = useCallback(async () => {
-    const count = await api.importProfiles();
-    if (count > 0) {
-      const profiles = await api.listProfiles();
-      dispatch({ type: "SET_PROFILES", profiles });
-    }
-  }, []);
-
-  const handleExport = useCallback(async () => {
-    await api.exportProfiles();
-  }, []);
-
-  const activeCount = Object.values(state.tunnelStates).filter(
+  const activeCount = Object.values(tunnelStates).filter(
     (s) => s.status === "connected",
   ).length;
 
-  return (
-    <div className="flex flex-col h-screen">
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          profiles={state.profiles}
-          tunnelStates={state.tunnelStates}
-          selectedId={state.selectedId}
-          onSelect={(id) => dispatch({ type: "SELECT", id })}
-          onAdd={() => dispatch({ type: "SHOW_FORM" })}
-          onImport={handleImport}
-          onExport={handleExport}
+  const VIEW_TITLES: Record<string, string> = {
+    "port-tools": "Port Tools",
+    history: "History",
+    environments: "Environments",
+  };
+
+  const renderMainContent = () => {
+    switch (currentView) {
+      case "port-tools":
+        return <PortUtilities />;
+      case "history":
+        return <HistoryPanel workspaceId={activeWorkspaceId} />;
+      case "environments":
+        return <EnvironmentEditor />;
+    }
+
+    // Default: connections view
+    if (showForm) {
+      return (
+        <ConnectionForm
+          editing={editingProfile}
+          folders={folders}
+          onSave={
+            editingProfile
+              ? (d) => handleUpdate(d as ConnectionProfile)
+              : handleCreate
+          }
+          onCancel={hideForm}
         />
-        <main className="flex-1 overflow-y-auto p-6">
-          {state.showForm ? (
-            <ConnectionForm
-              editing={state.editingProfile}
-              onSave={state.editingProfile ? handleUpdate : handleCreate}
-              onCancel={() => dispatch({ type: "HIDE_FORM" })}
-            />
-          ) : selectedProfile ? (
-            <ConnectionDetail
-              profile={selectedProfile}
-              tunnelState={selectedTunnelState}
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-              onEdit={() =>
-                dispatch({ type: "SHOW_FORM", editing: selectedProfile })
-              }
-              onDelete={handleDelete}
-            />
-          ) : (
-            <EmptyState onAdd={() => dispatch({ type: "SHOW_FORM" })} />
-          )}
-        </main>
+      );
+    }
+
+    if (selectedProfile) {
+      return (
+        <ConnectionDetail
+          profile={selectedProfile}
+          tunnelState={selectedTunnelState}
+          onConnect={handleConnect}
+          onDisconnect={handleDisconnect}
+          onEdit={() => showEditForm(selectedProfile)}
+          onDelete={deleteProfile}
+        />
+      );
+    }
+
+    return <EmptyState onAdd={showCreateForm} />;
+  };
+
+  return (
+    <AuthGate>
+      <div className="flex flex-col h-screen bg-bg">
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar
+            profiles={profiles}
+            folders={folders}
+            tunnelStates={tunnelStates}
+            selectedId={selectedId}
+            currentView={currentView}
+            workspaceId={activeWorkspaceId}
+            onSelect={(id) => {
+              select(id);
+              setCurrentView("connections");
+            }}
+            onAdd={() => {
+              showCreateForm();
+              setCurrentView("connections");
+            }}
+            onImport={importProfiles}
+            onExport={exportProfiles}
+            onSwitchView={handleSwitchView}
+          />
+          <main className="flex-1 overflow-y-auto p-8">
+            {currentView !== "connections" && (
+              <div className="mb-6">
+                <h1 className="text-lg font-semibold tracking-tight text-text-primary">
+                  {VIEW_TITLES[currentView]}
+                </h1>
+                <div className="mt-2 h-px bg-border" />
+              </div>
+            )}
+            {renderMainContent()}
+          </main>
+        </div>
+        <StatusBar
+          activeCount={activeCount}
+          totalCount={profiles.length}
+        />
       </div>
-      <StatusBar
-        activeCount={activeCount}
-        totalCount={state.profiles.length}
-      />
-    </div>
+    </AuthGate>
   );
 }

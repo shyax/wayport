@@ -1,28 +1,141 @@
 @import "tailwindcss";
 
-:root {
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-hover: #334155;
-  --color-border: #334155;
-  --color-text: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-green: #22c55e;
-  --color-yellow: #eab308;
-  --color-orange: #f97316;
-  --color-red: #ef4444;
+@theme {
+  /* Background layers - deep warm charcoal */
+  --color-bg: #0a0908;
+  --color-bg-elevated: #121110;
+  --color-surface: #1a1816;
+  --color-surface-hover: #221f1c;
+  --color-surface-active: #2a2723;
+
+  /* Borders - warm */
+  --color-border: #2a2723;
+  --color-border-subtle: #1e1c19;
+  --color-border-focus: #d4944c;
+
+  /* Text - warm whites */
+  --color-text-primary: #ede9e3;
+  --color-text-secondary: #9e9590;
+  --color-text-muted: #5e5852;
+
+  /* Accent - warm amber/copper */
+  --color-accent: #d4944c;
+  --color-accent-hover: #c4843c;
+  --color-accent-subtle: #d4944c10;
+  --color-accent-muted: #d4944c20;
+
+  /* Nav rail */
+  --color-rail: #0e0d0b;
+  --color-rail-active: #d4944c18;
+  --color-rail-indicator: #d4944c;
+
+  /* Status */
+  --color-status-connected: #5eead4;
+  --color-status-connecting: #fbbf24;
+  --color-status-reconnecting: #f97316;
+  --color-status-error: #f87171;
+  --color-status-disconnected: #5e5852;
+
+  /* Status backgrounds */
+  --color-status-connected-bg: #5eead410;
+  --color-status-connecting-bg: #fbbf2410;
+  --color-status-reconnecting-bg: #f9731610;
+  --color-status-error-bg: #f8717110;
+
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("https://rsms.me/inter/font-files/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@latest/fonts/variable/JetBrainsMono[wght].woff2") format("woff2");
 }
 
 body {
   margin: 0;
   background: var(--color-bg);
-  color: var(--color-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Focus ring utility */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Number input - hide spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Pulse animation for connecting status */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-status-pulse {
+  animation: status-pulse 1.8s ease-in-out infinite;
+}
+
+/* Glow effect for connected accent */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 0 #d4944c30; }
+  50% { box-shadow: 0 0 16px 2px #d4944c50; }
+}
+.animate-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-status-pulse,
+  .animate-glow {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

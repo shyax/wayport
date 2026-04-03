@@ -1,5 +1,5 @@
 {
-  "name": "port-forwarding",
+  "name": "porthole",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -14,9 +14,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.101.1",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
