@@ -1,20 +1,63 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ForwardingType {
+    Local,
+    Remote,
+    Dynamic,
+}
+
+impl Default for ForwardingType {
+    fn default() -> Self {
+        ForwardingType::Local
+    }
+}
+
+fn default_workspace_id() -> String {
+    "local".to_string()
+}
+
+fn default_version() -> i32 {
+    1
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionProfile {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub forwarding_type: ForwardingType,
     pub ssh_user: String,
     pub bastion_host: String,
     pub bastion_port: u16,
     pub identity_file: String,
     pub local_port: u16,
-    pub remote_host: String,
-    pub remote_port: u16,
+    #[serde(default)]
+    pub remote_host: Option<String>,
+    #[serde(default)]
+    pub remote_port: Option<u16>,
     pub auto_reconnect: bool,
+    #[serde(default)]
+    pub jump_hosts: Vec<JumpHost>,
     pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default = "default_workspace_id")]
+    pub workspace_id: String,
+    #[serde(default)]
+    pub folder_id: Option<String>,
+    #[serde(default)]
+    pub sort_order: i32,
+    #[serde(default = "default_version")]
+    pub version: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JumpHost {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -34,6 +77,17 @@ pub struct TunnelState {
     pub error: Option<String>,
     pub connected_since: Option<String>,
     pub reconnect_attempt: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortInfo {
+    pub port: u16,
+    pub pid: Option<u32>,
+    pub process_name: Option<String>,
+    pub state: String,
+    pub local_addr: String,
+    pub remote_addr: Option<String>,
+    pub protocol: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,4 +111,53 @@ impl Default for StoreConfig {
             window_bounds: None,
         }
     }
+}
+
+// --- New types for SQLite-backed features ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Workspace {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub workspace_type: String, // "personal" or "team"
+    pub is_local: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Folder {
+    pub id: String,
+    pub workspace_id: String,
+    pub parent_id: Option<String>,
+    pub name: String,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Environment {
+    pub id: String,
+    pub workspace_id: String,
+    pub name: String,
+    pub variables: std::collections::HashMap<String, String>,
+    pub sort_order: i32,
+    pub is_default: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoryEntry {
+    pub id: String,
+    pub workspace_id: String,
+    pub profile_id: Option<String>,
+    pub profile_name: String,
+    pub user_display_name: String,
+    pub action: String, // "connect", "disconnect", "error", "reconnect"
+    pub details: Option<String>,
+    pub duration_secs: Option<i64>,
+    pub created_at: String,
 }

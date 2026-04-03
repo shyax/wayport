@@ -1,4 +1,4 @@
-use crate::types::{ConnectionProfile, TunnelState, TunnelStatus};
+use crate::types::{ConnectionProfile, ForwardingType, TunnelState, TunnelStatus};
 use std::collections::HashMap;
 use std::process::{Child, Stdio};
 use parking_lot::RwLock;
@@ -78,49 +78,94 @@ impl TunnelManager {
         });
     }
 
+    fn build_ssh_args(profile: &ConnectionProfile) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+
+        // Identity file
+        if !profile.identity_file.is_empty() {
+            args.push("-i".to_string());
+            args.push(profile.identity_file.clone());
+        }
+
+        // Forwarding flag based on type
+        match profile.forwarding_type {
+            ForwardingType::Local => {
+                let remote_host = profile.remote_host.as_deref().unwrap_or("localhost");
+                let remote_port = profile.remote_port.unwrap_or(22);
+                args.push("-L".to_string());
+                args.push(format!("{}:{}:{}", profile.local_port, remote_host, remote_port));
+            }
+            ForwardingType::Remote => {
+                let remote_host = profile.remote_host.as_deref().unwrap_or("localhost");
+                let remote_port = profile.remote_port.unwrap_or(22);
+                args.push("-R".to_string());
+                args.push(format!("{}:{}:{}", profile.local_port, remote_host, remote_port));
+            }
+            ForwardingType::Dynamic => {
+                args.push("-D".to_string());
+                args.push(profile.local_port.to_string());
+            }
+        }
+
+        // ProxyJump for multi-hop
+        if !profile.jump_hosts.is_empty() {
+            let jumps: Vec<String> = profile
+                .jump_hosts
+                .iter()
+                .map(|jh| format!("{}@{}:{}", jh.user, jh.host, jh.port))
+                .collect();
+            args.push("-J".to_string());
+            args.push(jumps.join(","));
+        }
+
+        // Common options
+        args.push("-N".to_string());
+        args.push("-o".to_string());
+        args.push("ServerAliveInterval=15".to_string());
+        args.push("-o".to_string());
+        args.push("ServerAliveCountMax=3".to_string());
+        args.push("-o".to_string());
+        args.push("ExitOnForwardFailure=yes".to_string());
+        args.push("-o".to_string());
+        args.push("StrictHostKeyChecking=accept-new".to_string());
+        args.push("-p".to_string());
+        args.push(profile.bastion_port.to_string());
+        args.push(format!("{}@{}", profile.ssh_user, profile.bastion_host));
+
+        args
+    }
+
+    fn verify_tunnel(forwarding_type: ForwardingType, local_port: u16, child: &mut Child) -> bool {
+        match forwarding_type {
+            ForwardingType::Local | ForwardingType::Dynamic => {
+                Self::verify_port_reachable(local_port)
+            }
+            ForwardingType::Remote => {
+                // For remote forwarding, the bind is on the server side.
+                // We can't probe locally — just check the process is still alive after a delay.
+                thread::sleep(Duration::from_secs(2));
+                matches!(child.try_wait(), Ok(None))
+            }
+        }
+    }
+
     fn spawn_ssh_process(
         profile: &ConnectionProfile,
         tunnels: &Arc<RwLock<HashMap<String, ManagedTunnel>>>,
         on_state_update: impl Fn(TunnelState) + Send + 'static,
     ) {
-        let port_forward = format!(
-            "{}:{}:{}",
-            profile.local_port, profile.remote_host, profile.remote_port
-        );
-        let bastion_port = profile.bastion_port.to_string();
-        let bastion_addr = format!("{}@{}", profile.ssh_user, profile.bastion_host);
-
-        let args = vec![
-            "-i",
-            &profile.identity_file,
-            "-L",
-            &port_forward,
-            "-N",
-            "-o",
-            "ServerAliveInterval=15",
-            "-o",
-            "ServerAliveCountMax=3",
-            "-o",
-            "ExitOnForwardFailure=yes",
-            "-o",
-            "StrictHostKeyChecking=accept-new",
-            "-p",
-            &bastion_port,
-            &bastion_addr,
-        ];
+        let args = Self::build_ssh_args(profile);
 
         match std::process::Command::new("ssh")
-            .args(args)
+            .args(&args)
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
         {
             Ok(mut child) => {
-                // Try to verify connection with TCP probe
                 thread::sleep(Duration::from_millis(500));
 
-                if Self::verify_port_reachable(profile.local_port) {
-                    // Connected!
+                if Self::verify_tunnel(profile.forwarding_type, profile.local_port, &mut child) {
                     let connected_state = TunnelState {
                         profile_id: profile.id.clone(),
                         status: TunnelStatus::Connected,
@@ -136,7 +181,6 @@ impl TunnelManager {
                         tunnel.state = connected_state;
                     }
                 } else {
-                    // Port not reachable - kill process
                     let _ = child.kill();
 
                     let error_state = TunnelState {
