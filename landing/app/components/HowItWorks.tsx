@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Step {
   number: string;
@@ -35,91 +34,70 @@ const steps: Step[] = [
 ];
 
 export default function HowItWorks() {
-  const shouldReduceMotion = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
-
   return (
-    <section id="how-it-works" className="py-24 px-4" aria-label="How it works">
+    <section id="how-it-works" className="py-36 px-4" aria-label="How it works">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.4 }}
-            className="text-xs font-semibold uppercase tracking-widest text-[#d4944c] mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            How it works
-          </motion.p>
-          <motion.h2
-            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl sm:text-4xl md:text-5xl text-[#e8ecf4] leading-tight"
+        {/* Header — left-aligned */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-16"
+        >
+          <h2
+            className="text-3xl sm:text-4xl md:text-5xl text-text leading-tight"
             style={{ fontFamily: "var(--font-serif)" }}
           >
             Up and running in three steps
-          </motion.h2>
-        </div>
+          </h2>
+        </motion.div>
 
-        {/* Steps */}
-        <div
-          ref={ref}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
+        {/* Timeline */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="max-w-2xl"
         >
           {steps.map((step, i) => (
-            <motion.article
-              key={step.number}
-              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 32 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{
-                duration: 0.55,
-                delay: i * 0.12,
-                ease: [0.25, 0.1, 0.25, 1],
-              }}
-              className="relative flex flex-col gap-5 p-6 rounded-2xl bg-[#111623] border border-[#1e2538]"
-            >
-              {/* Step number */}
-              <div
-                className="text-7xl font-bold leading-none select-none text-[#d4944c]/20 italic"
-                style={{ fontFamily: "var(--font-serif)" }}
-                aria-hidden="true"
-              >
-                {step.number}
+            <div key={step.number} className="flex gap-6">
+              {/* Left: circle + connector line */}
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center shrink-0">
+                  <span
+                    className="text-xs text-text-muted tabular-nums"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {step.number}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div className="w-px flex-1 mt-3 mb-0 border-l border-border" aria-hidden="true" />
+                )}
               </div>
 
-              {/* Content */}
-              <div className="flex flex-col gap-2">
-                <h3 className="text-[#e8ecf4] font-semibold text-lg">
+              {/* Right: content */}
+              <div className={`flex flex-col gap-3 pb-12 flex-1 ${i === steps.length - 1 ? "pb-0" : ""}`}>
+                <h3 className="text-lg font-semibold text-text leading-snug">
                   {step.title}
                 </h3>
-                <p className="text-sm text-[#8891a5] leading-relaxed">
+                <p className="text-sm text-text-secondary leading-relaxed">
                   {step.description}
                 </p>
+                <div className="rounded-lg bg-bg-elevated border border-border px-4 py-3 overflow-x-auto">
+                  <pre
+                    className="text-xs text-teal leading-5 whitespace-pre"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {step.code}
+                  </pre>
+                </div>
               </div>
-
-              {/* Code snippet */}
-              <div className="mt-auto rounded-xl bg-[#0c1019] border border-[#1e2538] px-4 py-3 overflow-x-auto">
-                <pre
-                  className="text-xs text-[#5eead4] leading-5 whitespace-pre"
-                  style={{ fontFamily: "var(--font-mono)" }}
-                >
-                  {step.code}
-                </pre>
-              </div>
-
-              {/* Connector line (desktop only) */}
-              {i < steps.length - 1 && (
-                <div
-                  className="hidden md:block absolute top-12 -right-4 w-8 h-px bg-gradient-to-r from-[#1e2538] to-transparent"
-                  aria-hidden="true"
-                />
-              )}
-            </motion.article>
+            </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

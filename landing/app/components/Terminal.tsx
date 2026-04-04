@@ -55,14 +55,14 @@ function TypedLine({ shouldType }: { shouldType: boolean }) {
 
   return (
     <span>
-      <span className="text-[#8891a5]">{displayed.slice(0, nameEnd)}</span>
+      <span className="text-text-secondary">{displayed.slice(0, nameEnd)}</span>
       {statusStart >= nameEnd ? (
-        <span className="text-[#5eead4]">{displayed.slice(nameEnd)}</span>
+        <span className="text-teal">{displayed.slice(nameEnd)}</span>
       ) : (
-        <span className="text-[#8891a5]">{displayed.slice(nameEnd)}</span>
+        <span className="text-text-secondary">{displayed.slice(nameEnd)}</span>
       )}
       <span
-        className={`inline-block w-2 h-4 bg-[#e8ecf4] align-text-bottom ml-0.5 transition-opacity duration-100 ${
+        className={`inline-block w-2 h-4 bg-text align-text-bottom ml-0.5 transition-opacity duration-100 ${
           cursorVisible ? "opacity-100" : "opacity-0"
         }`}
         aria-hidden="true"
@@ -104,29 +104,19 @@ export default function Terminal() {
             : { opacity: 0, y: 40 }
         }
         transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-        whileHover={
-          shouldReduceMotion
-            ? {}
-            : {
-                rotateX: -2,
-                rotateY: 2,
-                scale: 1.01,
-              }
-        }
-        style={{ perspective: 1000, transformStyle: "preserve-3d" }}
-        className="w-full max-w-3xl rounded-2xl overflow-hidden border border-[#1e2538] shadow-2xl shadow-black/60"
+        className="w-full max-w-3xl rounded-xl overflow-hidden border border-border shadow-2xl shadow-black/60"
       >
         {/* Outer glow */}
         <div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
+          className="absolute inset-0 rounded-xl pointer-events-none"
           style={{
-            boxShadow: "0 0 60px 0 rgba(212,148,76,0.08)",
+            boxShadow: "0 0 60px 0 rgba(94,234,212,0.06)",
           }}
           aria-hidden="true"
         />
 
         {/* Title bar */}
-        <div className="relative bg-[#111623] px-4 py-3 flex items-center justify-between border-b border-[#1e2538]">
+        <div className="relative bg-surface px-4 py-3 flex items-center justify-between border-b border-border">
           {/* Traffic lights */}
           <div className="flex items-center gap-2" aria-hidden="true">
             <span className="w-3 h-3 rounded-full bg-[#ff5f57] block" />
@@ -136,7 +126,7 @@ export default function Terminal() {
 
           {/* Title */}
           <span
-            className="absolute left-1/2 -translate-x-1/2 text-[#545d73] text-sm"
+            className="absolute left-1/2 -translate-x-1/2 text-text-muted text-sm"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             Porthole
@@ -145,7 +135,7 @@ export default function Terminal() {
           {/* Copy button */}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#545d73] hover:text-[#8891a5] hover:bg-[#181e2e] transition-colors border border-[#1e2538]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors border border-border"
             style={{ fontFamily: "var(--font-mono)" }}
             aria-label="Copy install command"
           >
@@ -165,57 +155,57 @@ export default function Terminal() {
 
         {/* Terminal body */}
         <div
-          className="bg-[#0c1019] px-5 py-5 text-sm overflow-x-auto"
+          className="bg-bg-elevated px-5 py-5 text-sm overflow-x-auto"
           style={{ fontFamily: "var(--font-mono)" }}
           role="region"
           aria-label="Terminal output"
         >
           <div className="flex flex-col gap-1 min-w-max">
             {/* Block 1 — connect staging db */}
-            <TerminalLine className="text-[#545d73]">
+            <TerminalLine className="text-text-muted">
               # Your tunnels, one click away
             </TerminalLine>
             <TerminalLine>
-              <span className="text-[#d4944c]">❯ </span>
-              <span className="text-[#e8ecf4]">porthole connect </span>
-              <span className="text-[#60a5fa]">&quot;Staging DB&quot;</span>
+              <span className="text-accent">❯ </span>
+              <span className="text-text">porthole connect </span>
+              <span className="text-blue">&quot;Staging DB&quot;</span>
             </TerminalLine>
             <TerminalLine>
-              <span className="text-[#5eead4]">✓ </span>
-              <span className="text-[#8891a5]">Connected — </span>
-              <span className="text-[#e8ecf4]">localhost:5433</span>
-              <span className="text-[#545d73]"> → </span>
-              <span className="text-[#e8ecf4]">staging-db.internal:5432</span>
+              <span className="text-teal">✓ </span>
+              <span className="text-text-secondary">Connected — </span>
+              <span className="text-text">localhost:5433</span>
+              <span className="text-text-muted"> → </span>
+              <span className="text-text">staging-db.internal:5432</span>
             </TerminalLine>
 
             {/* Block 2 — connect prod redis */}
             <TerminalLine className="mt-3">
-              <span className="text-[#d4944c]">❯ </span>
-              <span className="text-[#e8ecf4]">porthole connect </span>
-              <span className="text-[#60a5fa]">&quot;Prod Redis&quot;</span>
+              <span className="text-accent">❯ </span>
+              <span className="text-text">porthole connect </span>
+              <span className="text-blue">&quot;Prod Redis&quot;</span>
             </TerminalLine>
             <TerminalLine>
-              <span className="text-[#5eead4]">✓ </span>
-              <span className="text-[#8891a5]">Connected — </span>
-              <span className="text-[#e8ecf4]">localhost:6380</span>
-              <span className="text-[#545d73]"> → </span>
-              <span className="text-[#e8ecf4]">redis.prod.internal:6379</span>
+              <span className="text-teal">✓ </span>
+              <span className="text-text-secondary">Connected — </span>
+              <span className="text-text">localhost:6380</span>
+              <span className="text-text-muted"> → </span>
+              <span className="text-text">redis.prod.internal:6379</span>
             </TerminalLine>
 
             {/* Block 3 — status */}
             <TerminalLine className="mt-3">
-              <span className="text-[#d4944c]">❯ </span>
-              <span className="text-[#e8ecf4]">porthole status</span>
+              <span className="text-accent">❯ </span>
+              <span className="text-text">porthole status</span>
             </TerminalLine>
-            <TerminalLine className="mt-1 text-[#545d73] grid grid-cols-[14rem_10rem_1fr] gap-0">
+            <TerminalLine className="mt-1 text-text-muted grid grid-cols-[14rem_10rem_1fr] gap-0">
               <span>TUNNEL</span>
               <span>STATUS</span>
               <span>UPTIME</span>
             </TerminalLine>
             <TerminalLine className="grid grid-cols-[14rem_10rem_1fr] gap-0">
-              <span className="text-[#8891a5]">Staging DB</span>
-              <span className="text-[#5eead4]">● Active</span>
-              <span className="text-[#8891a5]">2h 14m</span>
+              <span className="text-text-secondary">Staging DB</span>
+              <span className="text-teal">● Active</span>
+              <span className="text-text-secondary">2h 14m</span>
             </TerminalLine>
             <TerminalLine className="grid grid-cols-[14rem_10rem_1fr] gap-0">
               <TypedLine shouldType={isInView} />
@@ -251,7 +241,7 @@ function CheckIcon() {
       height="12"
       viewBox="0 0 16 16"
       fill="none"
-      stroke="#5eead4"
+      stroke="var(--color-teal)"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"

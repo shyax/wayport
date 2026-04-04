@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Feature {
   icon: React.ReactNode;
@@ -33,7 +32,7 @@ const features: Feature[] = [
     description:
       "See what's running on any port. Kill rogue processes instantly. Full visibility into your local network.",
     tag: "Utility",
-    tagColor: "text-[#5eead4] bg-[#5eead4]/10 border-[#5eead4]/20",
+    tagColor: "text-teal bg-teal/10 border-teal/20",
     code: "porthole scan 3000",
   },
   {
@@ -49,7 +48,7 @@ const features: Feature[] = [
     description:
       "Export and share tunnel configs with your team. New teammate? Onboarded in 60 seconds.",
     tag: "Collaboration",
-    tagColor: "text-[#d4944c] bg-[#d4944c]/10 border-[#d4944c]/20",
+    tagColor: "text-accent bg-accent/10 border-accent/20",
   },
   {
     icon: <SyncIcon />,
@@ -57,147 +56,116 @@ const features: Feature[] = [
     description:
       "Native app for macOS, Windows, and Linux. ~8MB. Launches in under a second.",
     tag: "Cross Platform",
-    tagColor: "text-[#5eead4] bg-[#5eead4]/10 border-[#5eead4]/20",
+    tagColor: "text-teal bg-teal/10 border-teal/20",
   },
 ];
 
-export default function Features() {
-  const shouldReduceMotion = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
+const [heroFeature, ...gridFeatures] = features;
 
+export default function Features() {
   return (
-    <section id="features" className="py-24 px-4" aria-label="Features">
+    <section id="features" className="py-36 px-4" aria-label="Features">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.4 }}
-            className="text-xs font-semibold uppercase tracking-widest text-[#d4944c] mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            Features
-          </motion.p>
           <motion.h2
-            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl sm:text-4xl md:text-5xl text-[#e8ecf4] mb-5 leading-tight"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl sm:text-4xl md:text-5xl text-text mb-5 leading-tight"
             style={{ fontFamily: "var(--font-serif)" }}
           >
             Everything you need to manage tunnels
           </motion.h2>
           <motion.p
-            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.18 }}
-            className="text-base sm:text-lg text-[#8891a5] max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.08 }}
+            className="text-base sm:text-lg text-text-secondary max-w-2xl mx-auto"
           >
             From solo developers to engineering teams, Porthole makes port forwarding effortless.
           </motion.p>
         </div>
 
-        {/* Grid */}
-        <div
-          ref={ref}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
         >
-          {features.map((feature, i) => (
-            <FeatureCard
-              key={feature.title}
-              feature={feature}
-              index={i}
-              isInView={isInView}
-              shouldReduceMotion={!!shouldReduceMotion}
-            />
-          ))}
-        </div>
+          {/* Hero feature */}
+          <article className="w-full bg-surface rounded-lg p-8 sm:p-10 flex flex-col sm:flex-row gap-8 mb-4">
+            <div className="w-14 h-14 rounded-xl bg-bg-elevated border border-border flex items-center justify-center text-accent shrink-0">
+              <span className="scale-150">{heroFeature.icon}</span>
+            </div>
+            <div className="flex flex-col gap-3 flex-1">
+              <h3 className="text-text font-semibold text-xl leading-snug">
+                {heroFeature.title}
+              </h3>
+              <p className="text-base text-text-secondary leading-relaxed">
+                {heroFeature.description}
+              </p>
+              {heroFeature.code && (
+                <div
+                  className="mt-2 pt-3 border-t border-border"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  <code className="text-sm text-accent">{heroFeature.code}</code>
+                </div>
+              )}
+            </div>
+          </article>
+
+          {/* Remaining features grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {gridFeatures.map((feature) => (
+              <article
+                key={feature.title}
+                className="group relative rounded-lg bg-surface border border-border p-6 flex flex-col gap-4 overflow-hidden transition-colors duration-200 hover:bg-surface-hover"
+              >
+                {/* Icon */}
+                <div className="w-10 h-10 rounded-xl bg-bg-elevated border border-border flex items-center justify-center text-accent shrink-0">
+                  {feature.icon}
+                </div>
+
+                <div className="flex flex-col gap-2 flex-1">
+                  {/* Title row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-text font-semibold text-base leading-snug">
+                      {feature.title}
+                    </h3>
+                    {feature.tag && (
+                      <span
+                        className={`shrink-0 text-xs px-2 py-0.5 rounded-full border ${feature.tagColor}`}
+                      >
+                        {feature.tag}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+
+                {/* Code snippet */}
+                {feature.code && (
+                  <div
+                    className="mt-auto pt-3 border-t border-border"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    <code className="text-xs text-accent">{feature.code}</code>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </section>
-  );
-}
-
-function FeatureCard({
-  feature,
-  index,
-  isInView,
-  shouldReduceMotion,
-}: {
-  feature: Feature;
-  index: number;
-  isInView: boolean;
-  shouldReduceMotion: boolean;
-}) {
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 28 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.08,
-        ease: [0.25, 0.1, 0.25, 1],
-      }}
-      className="group relative rounded-2xl bg-[#111623] border border-[#1e2538] p-6 flex flex-col gap-4 overflow-hidden transition-colors duration-300 hover:bg-[#181e2e]"
-    >
-      {/* Gradient border glow on hover */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(212,148,76,0.12) 0%, rgba(94,234,212,0.06) 100%)",
-          mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          WebkitMask:
-            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          maskComposite: "exclude",
-          WebkitMaskComposite: "xor",
-          padding: "1px",
-        }}
-        aria-hidden="true"
-      />
-      {/* Subtle top gradient highlight */}
-      <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#1e2538] to-transparent group-hover:via-[#d4944c]/30 transition-all duration-300"
-        aria-hidden="true"
-      />
-
-      {/* Icon */}
-      <div className="w-10 h-10 rounded-xl bg-[#0c1019] border border-[#1e2538] flex items-center justify-center text-[#d4944c] shrink-0">
-        {feature.icon}
-      </div>
-
-      <div className="flex flex-col gap-2 flex-1">
-        {/* Title row */}
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-[#e8ecf4] font-semibold text-base leading-snug">
-            {feature.title}
-          </h3>
-          {feature.tag && (
-            <span
-              className={`shrink-0 text-xs px-2 py-0.5 rounded-full border ${feature.tagColor}`}
-            >
-              {feature.tag}
-            </span>
-          )}
-        </div>
-
-        {/* Description */}
-        <p className="text-sm text-[#8891a5] leading-relaxed">
-          {feature.description}
-        </p>
-      </div>
-
-      {/* Code snippet */}
-      {feature.code && (
-        <div
-          className="mt-auto pt-3 border-t border-[#1e2538]"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          <code className="text-xs text-[#d4944c]">{feature.code}</code>
-        </div>
-      )}
-    </motion.article>
   );
 }
 

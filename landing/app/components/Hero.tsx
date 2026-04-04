@@ -72,21 +72,21 @@ export default function Hero() {
         {/* Headline */}
         <motion.h1
           variants={itemVariants}
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight tracking-tight text-white"
+          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight tracking-tight text-text"
           style={{ fontFamily: "var(--font-serif)", textShadow: "0 2px 40px rgba(6,8,15,0.9), 0 0 80px rgba(6,8,15,0.6)" }}
         >
           All your ports.
           <br />
-          <em className="not-italic text-[#d4944c] italic" style={{ textShadow: "0 2px 40px rgba(212,148,76,0.3)" }}>One window.</em>
+          <em className="not-italic text-accent italic" style={{ textShadow: "0 2px 40px rgba(212,148,76,0.3)" }}>One window.</em>
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
           variants={itemVariants}
-          className="text-lg sm:text-xl text-[#b0b8cc] max-w-xl leading-relaxed"
+          className="text-lg sm:text-xl text-text-secondary max-w-xl leading-relaxed"
           style={{ fontFamily: "var(--font-sans)", textShadow: "0 2px 20px rgba(6,8,15,0.9)" }}
         >
-          Save connections, forward ports, and manage tunnels — all from one app. Built for developers who are done juggling terminal windows.
+          Save tunnels. Connect in one click. Share with your team.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -102,14 +102,14 @@ export default function Hero() {
                 .querySelector("#download")
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#d4944c] hover:bg-[#e0a35c] text-white font-semibold text-base transition-colors duration-200 shadow-lg shadow-[#d4944c]/20"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-semibold text-base transition-colors duration-200 shadow-lg shadow-accent/20"
           >
             Download for free
           </a>
           <a
             href="#features"
             onClick={handleScrollToFeatures}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-[#1e2538] hover:border-[#545d73] text-[#8891a5] hover:text-[#e8ecf4] font-semibold text-base transition-colors duration-200"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border hover:border-text-muted text-text-secondary hover:text-text font-semibold text-base transition-colors duration-200"
           >
             Learn more
           </a>
@@ -118,7 +118,7 @@ export default function Hero() {
         {/* Meta note */}
         <motion.p
           variants={itemVariants}
-          className="text-xs text-[#545d73]"
+          className="text-xs text-text-muted"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           Free &nbsp;·&nbsp; macOS &nbsp;·&nbsp; Windows &nbsp;·&nbsp; Linux
@@ -130,7 +130,7 @@ export default function Hero() {
         <button
           onClick={handleScrollDown}
           aria-label="Scroll down"
-          className="flex flex-col items-center gap-1 text-[#545d73] hover:text-[#8891a5] transition-colors"
+          className="flex flex-col items-center gap-1 text-text-muted hover:text-text-secondary transition-colors"
         >
           <motion.div
             animate={

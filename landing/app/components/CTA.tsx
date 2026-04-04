@@ -34,7 +34,7 @@ export default function CTA() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 60% 40% at 50% 50%, rgba(212,148,76,0.1) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 40% at 50% 50%, rgba(94,234,212,0.04) 0%, transparent 70%)",
         }}
         aria-hidden="true"
       />
@@ -44,7 +44,7 @@ export default function CTA() {
         className="absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            "linear-gradient(to right, transparent, rgba(212,148,76,0.3), transparent)",
+            "linear-gradient(to right, transparent, rgba(94,234,212,0.15), transparent)",
         }}
         aria-hidden="true"
       />
@@ -54,19 +54,19 @@ export default function CTA() {
           initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-          className="text-4xl sm:text-5xl md:text-6xl text-[#e8ecf4] leading-tight"
+          className="text-4xl sm:text-5xl md:text-6xl text-text leading-tight"
           style={{ fontFamily: "var(--font-serif)" }}
         >
           Stop fighting your tunnels.
           <br />
-          <em className="italic text-[#d4944c]">Start shipping.</em>
+          <em className="italic text-accent">Start shipping.</em>
         </motion.h2>
 
         <motion.p
           initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="text-base sm:text-lg text-[#8891a5] max-w-md"
+          className="text-base sm:text-lg text-text-secondary max-w-md"
         >
           Free forever for individuals. Set up in 10 seconds.
         </motion.p>
@@ -81,7 +81,7 @@ export default function CTA() {
             href="https://github.com/porthole-app/porthole/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#d4944c] hover:bg-[#e0a35c] text-white font-semibold text-base transition-colors duration-200 shadow-xl shadow-[#d4944c]/25"
+            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-accent hover:bg-accent-hover text-white font-semibold text-base transition-colors duration-200 shadow-xl shadow-accent/25"
           >
             Download Porthole
           </a>
@@ -89,7 +89,7 @@ export default function CTA() {
             href="https://github.com/porthole-app/porthole"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl border border-[#1e2538] hover:border-[#545d73] text-[#8891a5] hover:text-[#e8ecf4] font-semibold text-base transition-colors duration-200"
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-lg border border-border hover:border-text-muted text-text-secondary hover:text-text font-semibold text-base transition-colors duration-200"
           >
             <GitHubIcon />
             View on GitHub
@@ -100,7 +100,7 @@ export default function CTA() {
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="text-sm text-[#545d73]"
+          className="text-sm text-text-muted"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           macOS &nbsp;·&nbsp; Windows &nbsp;·&nbsp; Linux

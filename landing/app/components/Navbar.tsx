@@ -21,17 +21,18 @@ function PortholeIcon() {
       height="32"
       viewBox="0 0 32 32"
       fill="none"
+      className="text-accent"
       aria-hidden="true"
     >
-      <circle cx="16" cy="16" r="14" stroke="#d4944c" strokeWidth="2" />
-      <circle cx="16" cy="16" r="9" stroke="#d4944c" strokeWidth="1.5" />
-      <circle cx="16" cy="16" r="3.5" fill="#d4944c" />
+      <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="2" />
+      <circle cx="16" cy="16" r="9" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="16" cy="16" r="3.5" fill="currentColor" />
       <line
         x1="16"
         y1="2"
         x2="16"
         y2="7"
-        stroke="#d4944c"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -40,7 +41,7 @@ function PortholeIcon() {
         y1="25"
         x2="16"
         y2="30"
-        stroke="#d4944c"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -49,7 +50,7 @@ function PortholeIcon() {
         y1="16"
         x2="7"
         y2="16"
-        stroke="#d4944c"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -58,7 +59,7 @@ function PortholeIcon() {
         y1="16"
         x2="30"
         y2="16"
-        stroke="#d4944c"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -113,7 +114,7 @@ export default function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[#0c1019]/95 backdrop-blur-md border-b border-[#1e2538]"
+            ? "bg-bg-elevated/95 backdrop-blur-md border-b border-border"
             : "bg-transparent"
         }`}
         aria-label="Main navigation"
@@ -129,7 +130,7 @@ export default function Navbar() {
             >
               <PortholeIcon />
               <span
-                className="text-[#e8ecf4] font-semibold text-lg tracking-tight"
+                className="text-text font-semibold text-lg tracking-tight"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 Porthole
@@ -149,7 +150,7 @@ export default function Navbar() {
                       ? (e) => handleNavClick(e, link.href)
                       : undefined
                   }
-                  className="text-[#8891a5] hover:text-[#e8ecf4] text-sm font-medium transition-colors duration-200"
+                  className="text-text-secondary hover:text-text text-sm font-medium transition-colors duration-200"
                 >
                   {link.label}
                 </a>
@@ -161,7 +162,7 @@ export default function Navbar() {
               <a
                 href="#download"
                 onClick={(e) => handleNavClick(e, "#download")}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4944c] hover:bg-[#e0a35c] text-white text-sm font-semibold transition-colors duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors duration-200"
               >
                 Download
               </a>
@@ -169,23 +170,23 @@ export default function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-[#111623] transition-colors"
+              className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded-lg hover:bg-surface transition-colors"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
             >
               <span
-                className={`block w-5 h-0.5 bg-[#e8ecf4] transition-all duration-200 ${
+                className={`block w-5 h-0.5 bg-text transition-all duration-200 ${
                   menuOpen ? "rotate-45 translate-y-2" : ""
                 }`}
               />
               <span
-                className={`block w-5 h-0.5 bg-[#e8ecf4] transition-all duration-200 ${
+                className={`block w-5 h-0.5 bg-text transition-all duration-200 ${
                   menuOpen ? "opacity-0" : ""
                 }`}
               />
               <span
-                className={`block w-5 h-0.5 bg-[#e8ecf4] transition-all duration-200 ${
+                className={`block w-5 h-0.5 bg-text transition-all duration-200 ${
                   menuOpen ? "-rotate-45 -translate-y-2" : ""
                 }`}
               />
@@ -204,7 +205,7 @@ export default function Navbar() {
             exit={shouldReduceMotion ? { opacity: 0 } : "exit"}
             variants={shouldReduceMotion ? undefined : menuVariants}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-40 bg-[#06080f]/98 backdrop-blur-md flex flex-col pt-20 px-6"
+            className="fixed inset-0 z-40 bg-bg/98 backdrop-blur-md flex flex-col pt-20 px-6"
           >
             <nav
               className="flex flex-col gap-2"
@@ -228,7 +229,7 @@ export default function Navbar() {
                     shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }
                   }
                   transition={{ delay: i * 0.06, duration: 0.2 }}
-                  className="text-[#e8ecf4] text-2xl font-medium py-3 border-b border-[#1e2538] hover:text-[#d4944c] transition-colors"
+                  className="text-text text-2xl font-medium py-3 border-b border-border hover:text-text-secondary transition-colors"
                 >
                   {link.label}
                 </motion.a>
@@ -246,7 +247,7 @@ export default function Navbar() {
                   delay: navLinks.length * 0.06,
                   duration: 0.2,
                 }}
-                className="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#d4944c] hover:bg-[#e0a35c] text-white text-lg font-semibold transition-colors"
+                className="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-lg bg-accent hover:bg-accent-hover text-white text-lg font-semibold transition-colors"
               >
                 Download for free
               </motion.a>
