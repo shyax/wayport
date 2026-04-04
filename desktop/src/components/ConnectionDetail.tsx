@@ -136,6 +136,7 @@ export function ConnectionDetail({
   onDelete,
   onDuplicate,
 }: ConnectionDetailProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const status = tunnelState?.status ?? "disconnected";
   const isConnected = status === "connected";
   const isActive = status === "connecting" || status === "reconnecting";
@@ -222,18 +223,31 @@ export function ConnectionDetail({
           >
             <Edit2 size={15} />
           </button>
-          <button
-            onClick={() => {
-              if (confirm(`Delete "${profile.name}"? This cannot be undone.`)) {
-                onDelete(profile.id);
-              }
-            }}
-            className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-status-error hover:border-status-error/30 cursor-pointer transition-colors duration-150"
-            title="Delete"
-            aria-label="Delete connection"
-          >
-            <Trash2 size={15} />
-          </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onDelete(profile.id)}
+                className="focus-ring px-2 py-1 rounded-lg bg-status-error/15 text-status-error hover:bg-status-error/25 border border-status-error/20 text-xs font-medium cursor-pointer transition-colors duration-150"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="focus-ring px-2 py-1 rounded-lg border border-border text-text-muted hover:text-text-secondary text-xs cursor-pointer transition-colors duration-150"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-status-error hover:border-status-error/30 cursor-pointer transition-colors duration-150"
+              title="Delete"
+              aria-label="Delete connection"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       </div>
 
