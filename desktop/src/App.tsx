@@ -131,7 +131,7 @@ export default function App() {
       }
 
       // Enter to connect selected (when not in form)
-      if (e.key === "Enter" && !showForm && selectedId && !e.target) {
+      if (e.key === "Enter" && !showForm && selectedId) {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "BUTTON") {
           e.preventDefault();
@@ -348,6 +348,8 @@ export default function App() {
         <StatusBar
           activeCount={activeCount}
           totalCount={profiles.length}
+          profiles={profiles}
+          tunnelStates={tunnelStates}
         />
       </div>
     </AuthGate>

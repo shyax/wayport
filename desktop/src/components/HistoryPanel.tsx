@@ -67,7 +67,7 @@ export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
   ];
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         {/* Source filter */}
         <div className="flex gap-1 bg-surface p-0.5 rounded-md border border-border">

@@ -16,6 +16,10 @@ import {
   Terminal,
   ChevronDown,
   ChevronRight,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
+  Loader2,
 } from "lucide-react";
 import * as api from "../lib/api";
 import type { ConnectionProfile, TunnelState, TunnelStatus } from "../lib/types";
@@ -32,37 +36,39 @@ interface ConnectionDetailProps {
 
 const STATUS_CONFIG: Record<
   TunnelStatus,
-  { label: string; color: string; bg: string; dot: string }
+  { label: string; color: string; bg: string; icon: React.ElementType; spin?: boolean }
 > = {
   disconnected: {
     label: "Disconnected",
     color: "text-status-disconnected",
     bg: "bg-surface",
-    dot: "bg-status-disconnected",
+    icon: MinusCircle,
   },
   connecting: {
     label: "Connecting",
     color: "text-status-connecting",
     bg: "bg-status-connecting-bg",
-    dot: "bg-status-connecting animate-status-pulse",
+    icon: Loader2,
+    spin: true,
   },
   connected: {
     label: "Connected",
     color: "text-status-connected",
     bg: "bg-status-connected-bg",
-    dot: "bg-status-connected",
+    icon: CheckCircle2,
   },
   reconnecting: {
     label: "Reconnecting",
     color: "text-status-reconnecting",
     bg: "bg-status-reconnecting-bg",
-    dot: "bg-status-reconnecting animate-status-pulse",
+    icon: RefreshCw,
+    spin: true,
   },
   error: {
     label: "Error",
     color: "text-status-error",
     bg: "bg-status-error-bg",
-    dot: "bg-status-error",
+    icon: XCircle,
   },
 };
 
@@ -134,10 +140,11 @@ export function ConnectionDetail({
   const isConnected = status === "connected";
   const isActive = status === "connecting" || status === "reconnecting";
   const statusInfo = STATUS_CONFIG[status];
+  const StatusIcon = statusInfo.icon;
   const typeInfo = TYPE_CONFIG[profile.forwarding_type] ?? TYPE_CONFIG.local;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -153,7 +160,10 @@ export function ConnectionDetail({
           </div>
           {/* Status badge */}
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${statusInfo.dot}`} />
+            <StatusIcon
+              size={14}
+              className={`${statusInfo.color} ${statusInfo.spin ? "animate-spin" : ""}`}
+            />
             <span className={`text-sm font-medium ${statusInfo.color}`}>
               {statusInfo.label}
             </span>
@@ -170,8 +180,30 @@ export function ConnectionDetail({
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons — connect/disconnect lives here */}
         <div className="flex gap-2">
+          {isConnected ? (
+            <button
+              onClick={() => onDisconnect(profile.id)}
+              className="focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-status-error/15 text-status-error hover:bg-status-error/25 border border-status-error/20 text-sm font-medium cursor-pointer transition-colors duration-150"
+            >
+              <Square size={13} />
+              Disconnect
+            </button>
+          ) : (
+            <button
+              onClick={() => onConnect(profile.id)}
+              disabled={isActive}
+              className="focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-status-connected/15 text-status-connected hover:bg-status-connected/25 border border-status-connected/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium cursor-pointer transition-colors duration-150"
+            >
+              {isActive ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Play size={13} />
+              )}
+              {isActive ? (status === "reconnecting" ? "Reconnecting…" : "Connecting…") : "Connect"}
+            </button>
+          )}
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(profile)}
@@ -191,7 +223,11 @@ export function ConnectionDetail({
             <Edit2 size={15} />
           </button>
           <button
-            onClick={() => onDelete(profile.id)}
+            onClick={() => {
+              if (confirm(`Delete "${profile.name}"? This cannot be undone.`)) {
+                onDelete(profile.id);
+              }
+            }}
             className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-status-error hover:border-status-error/30 cursor-pointer transition-colors duration-150"
             title="Delete"
             aria-label="Delete connection"
@@ -285,27 +321,6 @@ export function ConnectionDetail({
         <LogsPanel profileId={profile.id} />
       )}
 
-      {/* Connect / Disconnect */}
-      <div>
-        {isConnected ? (
-          <button
-            onClick={() => onDisconnect(profile.id)}
-            className="focus-ring inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-status-error/15 text-status-error hover:bg-status-error/25 border border-status-error/20 text-sm font-medium cursor-pointer transition-colors duration-150"
-          >
-            <Square size={14} />
-            Disconnect
-          </button>
-        ) : (
-          <button
-            onClick={() => onConnect(profile.id)}
-            disabled={isActive}
-            className="focus-ring inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-status-connected/15 text-status-connected hover:bg-status-connected/25 border border-status-connected/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium cursor-pointer transition-colors duration-150"
-          >
-            <Play size={14} />
-            Connect
-          </button>
-        )}
-      </div>
     </div>
   );
 }

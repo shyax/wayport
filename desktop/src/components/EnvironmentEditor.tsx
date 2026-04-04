@@ -11,7 +11,7 @@ export function EnvironmentEditor() {
   const env = environments.find((e) => e.id === selectedEnvId);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       {environments.length === 0 ? (
         <p className="text-sm text-text-muted">
           No environments yet. Create one from the environment switcher in the

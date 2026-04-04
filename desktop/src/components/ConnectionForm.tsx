@@ -52,6 +52,10 @@ export function ConnectionForm({
   const [loading, setLoading] = useState(false);
   const [portConflict, setPortConflict] = useState<string | null>(null);
 
+  const isPortValid = (p: number) => p > 0 && p < 65536;
+  const localPortValid = isPortValid(form.local_port);
+  const bastionPortValid = isPortValid(form.bastion_port);
+
   const isDynamic = form.forwarding_type === "dynamic";
 
   const handleSelectKey = async () => {
@@ -126,7 +130,7 @@ export function ConnectionForm({
     "w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent transition-colors duration-150";
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <h2 className="text-lg font-semibold tracking-tight text-text-primary mb-6">
         {editing ? "Edit Connection" : "New Connection"}
       </h2>
@@ -263,8 +267,11 @@ export function ConnectionForm({
                     bastion_port: parseInt(e.target.value),
                   })
                 }
-                className={inputClass}
+                className={`${inputClass} ${!bastionPortValid ? "border-status-error focus:border-status-error" : ""}`}
               />
+              {!bastionPortValid && (
+                <p className="text-[11px] text-status-error mt-1">Port must be 1–65535</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">
@@ -331,9 +338,12 @@ export function ConnectionForm({
                     onChange={(e) =>
                       handlePortChange(parseInt(e.target.value))
                     }
-                    className={inputClass}
+                    className={`${inputClass} ${!localPortValid || portConflict ? "border-status-error focus:border-status-error" : ""}`}
                   />
-                  {portConflict && (
+                  {!localPortValid && (
+                    <p className="text-[11px] text-status-error mt-1">Port must be 1–65535</p>
+                  )}
+                  {localPortValid && portConflict && (
                     <p className="text-[11px] text-status-reconnecting mt-1">
                       {portConflict}
                     </p>
@@ -372,10 +382,13 @@ export function ConnectionForm({
                 required
                 value={form.local_port}
                 onChange={(e) => handlePortChange(parseInt(e.target.value))}
-                className={inputClass}
+                className={`${inputClass} ${!localPortValid || portConflict ? "border-status-error focus:border-status-error" : ""}`}
                 placeholder="1080"
               />
-              {portConflict && (
+              {!localPortValid && (
+                <p className="text-[11px] text-status-error mt-1">Port must be 1–65535</p>
+              )}
+              {localPortValid && portConflict && (
                 <p className="text-[11px] text-status-reconnecting mt-1">
                   {portConflict}
                 </p>

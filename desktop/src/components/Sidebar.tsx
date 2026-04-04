@@ -11,6 +11,7 @@ import {
   X,
   StopCircle,
   FileCode2,
+  MoreHorizontal,
 } from "lucide-react";
 import { FolderTree } from "./FolderTree";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
@@ -66,7 +67,20 @@ export function Sidebar({
   onSearchChange,
 }: SidebarProps) {
   const [showSearch, setShowSearch] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMenu]);
 
   const activeCount = Object.values(tunnelStates).filter(
     (s) => s.status === "connected",
@@ -145,29 +159,46 @@ export function Sidebar({
                 >
                   <Search size={13} />
                 </button>
-                {onImportSshConfig && (
+                <div className="relative" ref={menuRef}>
                   <button
-                    onClick={onImportSshConfig}
-                    className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
-                    title="Import from SSH config"
+                    onClick={() => setShowMenu(!showMenu)}
+                    className={`focus-ring p-1.5 rounded-md cursor-pointer transition-colors duration-150 ${
+                      showMenu
+                        ? "text-accent bg-accent/10"
+                        : "text-text-muted hover:text-text-secondary hover:bg-surface-hover"
+                    }`}
+                    title="More actions"
                   >
-                    <FileCode2 size={13} />
+                    <MoreHorizontal size={13} />
                   </button>
-                )}
-                <button
-                  onClick={onImport}
-                  className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
-                  title="Import connections"
-                >
-                  <Download size={13} />
-                </button>
-                <button
-                  onClick={onExport}
-                  className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
-                  title="Export connections"
-                >
-                  <Upload size={13} />
-                </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated border border-border rounded-lg shadow-xl z-50 py-1">
+                      {onImportSshConfig && (
+                        <button
+                          onClick={() => { onImportSshConfig(); setShowMenu(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors text-left"
+                        >
+                          <FileCode2 size={13} />
+                          Import SSH Config
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { onImport(); setShowMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors text-left"
+                      >
+                        <Download size={13} />
+                        Import JSON
+                      </button>
+                      <button
+                        onClick={() => { onExport(); setShowMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors text-left"
+                      >
+                        <Upload size={13} />
+                        Export
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -43,16 +43,16 @@
   --color-status-error-bg: #f8717110;
 
   /* Fonts */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
 @font-face {
-  font-family: "Inter";
+  font-family: "Space Grotesk";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300 700;
   font-display: swap;
-  src: url("https://rsms.me/inter/font-files/InterVariable.woff2") format("woff2");
+  src: url("https://fonts.gstatic.com/s/spacegrotesk/v16/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gowFRntFKPD8c12.woff2") format("woff2");
 }
 
 @font-face {

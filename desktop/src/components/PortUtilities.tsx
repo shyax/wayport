@@ -19,7 +19,7 @@ export function PortUtilities() {
   const [activeTab, setActiveTab] = useState<Tab>("scan");
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="flex gap-1 bg-surface p-1 rounded-lg border border-border mb-6">
         {([
           { id: "scan" as Tab, label: "Scan", icon: Search },
