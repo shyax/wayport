@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { ConnectionDetail } from "./components/ConnectionDetail";
 import { ConnectionForm } from "./components/ConnectionForm";
@@ -19,6 +19,7 @@ import type { ConnectionProfile, NewConnectionProfile } from "./lib/types";
 export default function App() {
   const [currentView, setCurrentView] = useState<SidebarView>("connections");
   const [searchQuery, setSearchQuery] = useState("");
+  const pendingConnects = useRef<Set<string>>(new Set());
 
   const {
     profiles,
@@ -56,7 +57,25 @@ export default function App() {
 
     api.getTunnelStates().then(setTunnelStates);
 
-    const unlisten = api.onTunnelStateUpdate(updateTunnelState);
+    const unlisten = api.onTunnelStateUpdate((state) => {
+      updateTunnelState(state);
+      if (pendingConnects.current.has(state.profile_id)) {
+        if (state.status === "connected" || state.status === "error") {
+          pendingConnects.current.delete(state.profile_id);
+          const profile = useProfileStore.getState().profiles.find((p) => p.id === state.profile_id);
+          if (profile) {
+            const { activeWorkspaceId } = useWorkspaceStore.getState();
+            const { recordEvent } = useHistoryStore.getState();
+            recordEvent(
+              activeWorkspaceId,
+              state.profile_id,
+              profile.name,
+              state.status === "connected" ? "connect" : "error",
+            );
+          }
+        }
+      }
+    });
     return () => {
       unlisten.then((fn) => fn());
     };
@@ -150,16 +169,10 @@ export default function App() {
       // Pass active environment variables for substitution
       const envVars = getActiveVariables();
       const hasVars = Object.keys(envVars).length > 0;
+      pendingConnects.current.add(id);
       await connect(id, hasVars ? envVars : undefined);
-
-      await recordEvent(
-        activeWorkspaceId,
-        id,
-        profile.name,
-        "connect",
-      );
     },
-    [profiles, connect, recordEvent, activeWorkspaceId, updateProfile, getActiveVariables],
+    [profiles, connect, activeWorkspaceId, updateProfile, getActiveVariables],
   );
 
   const handleDisconnect = useCallback(
