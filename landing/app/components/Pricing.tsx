@@ -11,6 +11,7 @@ interface PricingTier {
   cta: string;
   featured?: boolean;
   badge?: string;
+  comingSoon?: boolean;
 }
 
 const tiers: PricingTier[] = [
@@ -40,9 +41,10 @@ const tiers: PricingTier[] = [
       "30-day history",
       "Priority support",
     ],
-    cta: "Get Pro",
+    cta: "Join waitlist",
     featured: true,
-    badge: "Most popular",
+    badge: "Coming soon",
+    comingSoon: true,
   },
   {
     name: "Team",
@@ -57,7 +59,9 @@ const tiers: PricingTier[] = [
       "90-day audit log",
       "Up to 20 members",
     ],
-    cta: "Start team trial",
+    cta: "Join waitlist",
+    comingSoon: true,
+    badge: "Coming soon",
   },
 ];
 
@@ -168,22 +172,31 @@ export default function Pricing() {
               </ul>
 
               {/* CTA */}
-              <a
-                href="#download"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document
-                    .querySelector("#download")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className={`mt-2 flex items-center justify-center py-3 px-5 rounded-lg font-semibold text-sm transition-colors duration-200 ${
-                  tier.featured
-                    ? "bg-accent hover:bg-accent-hover text-white"
-                    : "border border-border hover:border-text-muted text-text-secondary hover:text-text"
-                }`}
-              >
-                {tier.cta}
-              </a>
+              {tier.comingSoon ? (
+                <a
+                  href="mailto:yesweeyes.dev@gmail.com?subject=Porthole%20Pro%20waitlist"
+                  className="mt-2 flex items-center justify-center py-3 px-5 rounded-lg font-semibold text-sm transition-colors duration-200 border border-border hover:border-text-muted text-text-secondary hover:text-text"
+                >
+                  {tier.cta}
+                </a>
+              ) : (
+                <a
+                  href="#download"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document
+                      .querySelector("#download")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`mt-2 flex items-center justify-center py-3 px-5 rounded-lg font-semibold text-sm transition-colors duration-200 ${
+                    tier.featured
+                      ? "bg-accent hover:bg-accent-hover text-white"
+                      : "border border-border hover:border-text-muted text-text-secondary hover:text-text"
+                  }`}
+                >
+                  {tier.cta}
+                </a>
+              )}
             </article>
           ))}
         </motion.div>

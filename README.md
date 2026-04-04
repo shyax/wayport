@@ -1,85 +1,107 @@
 # Porthole
 
-A lightweight, cross-platform desktop app for managing SSH port-forwarding tunnels. Save connection profiles, connect with one click, and share configs with your team.
+A lightweight, cross-platform desktop app for managing SSH port-forwarding tunnels.
+Save connection profiles, connect with one click, and keep your tunnels alive automatically.
 
 ## Features
 
-- **Save & Recall Connections** — Store SSH tunnel profiles and reconnect with a single click
-- **Multi-tunnel Support** — Run multiple SSH tunnels simultaneously with live status indicators
+- **Save & recall connections** — Store SSH tunnel profiles and reconnect with a single click
+- **Multi-tunnel support** — Run multiple SSH tunnels simultaneously with live status indicators
 - **Auto-reconnect** — Automatically re-establish dropped tunnels with exponential backoff
-- **Import/Export** — Share connection configs with teammates via JSON export
-- **Cross-platform** — macOS, Windows, and Linux support via Tauri
-- **Tiny Binary** — ~5-10MB download (vs. Electron's 150MB)
+- **Import / export** — Share connection configs with teammates via JSON export
+- **SSH config import** — Import hosts directly from `~/.ssh/config`
+- **Port utilities** — Scan, kill, and monitor ports; detect conflicts before connecting
+- **Environment variables** — Substitute `${VAR}` in connection fields for staging/prod switching
+- **CLI** — Manage tunnels from the terminal with `porthole` commands
+- **Cross-platform** — macOS, Windows, and Linux via Tauri v2
+- **Tiny binary** — ~5-10 MB download (vs. Electron's 150 MB)
+
+## Download
+
+Get the latest release for your platform from the
+[GitHub Releases](https://github.com/shyax/porthole/releases) page.
+
+| Platform | File |
+|----------|------|
+| macOS (Apple Silicon) | `Porthole_*_aarch64.dmg` |
+| macOS (Intel) | `Porthole_*_x64.dmg` |
+| Windows | `Porthole_*_x64-setup.exe` |
+| Linux | `porthole_*_amd64.AppImage` |
 
 ## Tech Stack
 
 - **Frontend:** React 19 + TypeScript + Tailwind CSS v4
-- **Backend:** Rust + Tauri v2.10
-- **Process Management:** System `ssh` binary (honors `~/.ssh/config`, SSH agent, all key formats)
-- **Data Persistence:** JSON-based configuration in `~/.config/Porthole/`
+- **Backend:** Rust + Tauri v2
+- **CLI:** Rust (Clap v4)
+- **Shared core:** `porthole-core` crate
+- **Process management:** System `ssh` binary (honors `~/.ssh/config`, SSH agent, all key formats)
+- **Data persistence:** SQLite via `rusqlite` at `~/.config/Porthole/`
 
-## Getting Started
+## Monorepo Layout
+
+```
+porthole/
+  ├── desktop/                # Tauri v2 desktop app
+  │   ├── src/                # React frontend
+  │   │   ├── components/     # UI components
+  │   │   ├── stores/         # Zustand state stores
+  │   │   └── lib/            # Tauri IPC bindings + types
+  │   └── src-tauri/          # Rust backend
+  │       ├── src/
+  │       │   ├── commands.rs      # Tauri IPC handlers
+  │       │   ├── tunnel_manager.rs
+  │       │   ├── store.rs
+  │       │   ├── database.rs
+  │       │   └── port_utils.rs
+  │       └── tauri.conf.json
+  ├── cli/                    # porthole CLI
+  │   └── src/
+  ├── crates/
+  │   └── porthole-core/      # Shared types and logic
+  ├── landing/                # Marketing site (Next.js)
+  └── docs/                   # Architecture and development docs
+```
+
+## Development
 
 ### Prerequisites
 
 - Node.js 18+
-- Rust 1.77+ (install via [rustup.rs](https://rustup.rs))
+- Rust 1.77+ (via [rustup.rs](https://rustup.rs))
 - OpenSSH (standard on macOS/Linux; ships with Windows 10+)
 
-### Development
+### Desktop app
 
 ```bash
-# Install dependencies
+cd desktop
 npm install
+npm run dev        # dev server with hot reload
+npm run build      # production build + bundle
+```
 
-# Start dev server (runs Tauri dev mode)
+### CLI
+
+```bash
+cargo build -p porthole-cli --release
+./target/release/porthole --help
+```
+
+### Landing page
+
+```bash
+cd landing
+npm install
 npm run dev
-
-# Build for production
-npm run build
-
-# Build and package for macOS
-npm run package:mac
 ```
 
-The app will open at `http://localhost:5173` in dev mode, connected to the Rust backend.
+### All Rust checks
 
-## Project Structure
-
-```
-port-forwarding/
-  ├── src/                          # React frontend
-  │   ├── components/               # UI components
-  │   │   ├── Sidebar.tsx
-  │   │   ├── ConnectionForm.tsx
-  │   │   ├── ConnectionDetail.tsx
-  │   │   └── ...
-  │   ├── lib/
-  │   │   ├── api.ts               # Tauri command bindings
-  │   │   └── types.ts             # Shared TypeScript types
-  │   ├── App.tsx
-  │   ├── main.tsx
-  │   └── index.css
-  ├── src-tauri/                    # Rust backend
-  │   ├── src/
-  │   │   ├── main.rs              # App entry point
-  │   │   ├── lib.rs               # Setup and command handlers
-  │   │   ├── types.rs             # Data structures
-  │   │   ├── store.rs             # Persistent config storage
-  │   │   ├── tunnel_manager.rs    # SSH process lifecycle
-  │   │   └── commands.rs          # Tauri commands (IPC)
-  │   ├── tauri.conf.json          # Tauri config
-  │   └── Cargo.toml               # Rust dependencies
-  ├── package.json
-  ├── vite.config.ts
-  └── tsconfig.json
+```bash
+cargo check --workspace
+cargo clippy --workspace
 ```
 
-## Architecture
-
-### IPC Layer
-
-React frontend communicates with Rust backend via Tauri commands:
+## IPC Commands
 
 | Command | Purpose |
 |---------|---------|
@@ -91,16 +113,17 @@ React frontend communicates with Rust backend via Tauri commands:
 | `stop_tunnel` | Stop a specific tunnel |
 | `stop_all_tunnels` | Stop all active tunnels |
 | `get_tunnel_states` | Get current status of all tunnels |
+| `get_tunnel_logs` | Fetch SSH stderr output for a tunnel |
 | `export_profiles` | Export all profiles to JSON |
 | `import_profiles` | Import profiles from JSON |
-| `check_ssh` | Verify SSH availability on system |
+| `import_ssh_config` | Import hosts from `~/.ssh/config` |
+| `check_ssh` | Verify SSH is available on the system |
+| `find_next_available_port` | Find next free port after a given number |
 
-**Push Events:**
-- `tunnel-state-update` — Emitted when tunnel status changes (connecting, connected, reconnecting, error)
+**Push events:**
+- `tunnel-state-update` — Emitted when tunnel status changes
 
-### SSH Process Management
-
-The `TunnelManager` spawns system SSH processes with carefully tuned options:
+## SSH Process Options
 
 ```bash
 ssh -i <key> -L <local>:<remote_host>:<remote_port> -N \
@@ -111,39 +134,18 @@ ssh -i <key> -L <local>:<remote_host>:<remote_port> -N \
   <user>@<bastion>
 ```
 
-**Key Features:**
-- **TCP Probe Verification:** After spawn, the app probes `localhost:<local_port>` with TCP connect until the port is reachable (10s timeout). Confirms tunnel is working before marking "connected".
-- **Automatic Reconnect:** When a tunnel drops, it retries with exponential backoff (2s base, up to 60s, max 10 attempts).
-- **SSH Config Honored:** Uses system SSH binary, so `~/.ssh/config`, SSH agent, ProxyJump, and all OpenSSH features work automatically.
+After spawn, Porthole TCP-probes `localhost:<local_port>` every 500ms (10s timeout)
+to confirm the tunnel is working before marking it "Connected".
 
-## Data Model
+## Cutting a Release
 
-### ConnectionProfile
+1. Update `CHANGELOG.md`
+2. Bump version in `desktop/src-tauri/tauri.conf.json`
+3. Commit and tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+4. GitHub Actions builds all platforms and creates a draft release
 
-```typescript
-{
-  id: string;                    // UUID v4
-  name: string;                  // User-facing name
-  ssh_user: string;              // SSH username
-  bastion_host: string;          // Bastion IP or hostname
-  bastion_port: number;          // SSH port (default 22)
-  identity_file: string;         // Path to SSH private key
-  local_port: number;            // Local listening port
-  remote_host: string;           // Target host (RDS endpoint, etc)
-  remote_port: number;           // Target port
-  auto_reconnect: boolean;       // Auto-reconnect on drop
-  tags: string[];                // Optional labels
-  created_at: string;            // ISO 8601 timestamp
-  updated_at: string;            // ISO 8601 timestamp
-}
-```
-
-Profiles are persisted to `~/.config/Porthole/config.json` and can be exported/imported as JSON.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full release checklist.
 
 ## License
 
-MIT
-
-## Contributing
-
-Contributions welcome! Please fork and open a PR.
+Copyright (c) 2026 Shyam Sundar. All rights reserved. See [LICENSE](LICENSE) for details.

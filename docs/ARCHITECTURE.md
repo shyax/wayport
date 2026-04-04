@@ -2,36 +2,45 @@
 
 ## High-Level Overview
 
-Porthole is a desktop application that manages SSH port-forwarding tunnels. It consists of:
+Porthole is a desktop application that manages SSH port-forwarding tunnels. The repo is a
+Cargo workspace with three Rust crates and a Next.js landing page.
 
-1. **Tauri Framework** — Bridges Rust backend and React frontend
-2. **Rust Backend** — Spawns and manages SSH processes, persists config
-3. **React Frontend** — Provides the UI for creating/managing connections
+```
+porthole/
+  ├── desktop/src-tauri/   Tauri v2 app backend (Rust)
+  ├── desktop/src/          React 19 frontend (TypeScript)
+  ├── cli/                  porthole CLI (Rust, Clap v4)
+  └── crates/porthole-core/ Shared types and utilities
+```
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Porthole                       │
+│                        Porthole                             │
 ├─────────────────────────────────────────────────────────────┤
 │                      React Frontend                         │
-│  (src/App.tsx, src/components/*.tsx)                       │
-│  - Sidebar with connection list                            │
-│  - Connection form with SSH key picker                     │
-│  - Live status indicators                                  │
-│  - Export/Import buttons                                   │
+│  desktop/src/App.tsx                                        │
+│  desktop/src/components/*.tsx                               │
+│  desktop/src/stores/*.ts   (Zustand)                        │
+│  - Sidebar with connection list                             │
+│  - Connection form with SSH key picker                      │
+│  - Live status indicators                                   │
+│  - History panel, port utilities, env var editor            │
 ├─────────────────────────────────────────────────────────────┤
 │                    Tauri IPC Layer                          │
-│  Commands: list_profiles, create_profile, start_tunnel...  │
-│  Events: tunnel-state-update (push from backend)           │
+│  Commands: list_profiles, create_profile, start_tunnel...   │
+│  Events: tunnel-state-update (push from Rust backend)       │
 ├─────────────────────────────────────────────────────────────┤
 │                     Rust Backend                            │
-│  TunnelManager: Spawns SSH, tracks status                  │
-│  Store: Reads/writes config.json                           │
-│  Commands: IPC handlers that call TunnelManager/Store      │
+│  desktop/src-tauri/src/                                     │
+│  TunnelManager  — spawns SSH, tracks status, reconnects     │
+│  Store          — reads/writes config (SQLite via rusqlite) │
+│  PortMonitor    — watches ports for process info            │
+│  Commands       — IPC handlers                              │
 ├─────────────────────────────────────────────────────────────┤
-│              System SSH (/usr/bin/ssh)                     │
-│  - Honors ~/.ssh/config, SSH agent                         │
-│  - Supports all OpenSSH features                           │
-│  - Spawned per connection; managed by TunnelManager        │
+│              System SSH (/usr/bin/ssh)                      │
+│  - Honors ~/.ssh/config, SSH agent                          │
+│  - Supports all OpenSSH features                            │
+│  - Spawned per connection; managed by TunnelManager         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -54,7 +63,7 @@ Generate UUID, timestamp
   ↓
 store.save_profiles([...existing, new])
   ↓
-save to ~/.config/Porthole/config.json
+Persist to SQLite at ~/.config/Porthole/porthole.db
   ↓
 Return profile to frontend
   ↓
@@ -66,20 +75,22 @@ React state updated, UI re-renders
 ```
 User clicks "Connect"
   ↓
-invoke("start_tunnel", { profileId })
+invoke("start_tunnel", { profileId, envVars })
   ↓
 commands::start_tunnel()
   ↓
 Lookup profile by ID
+Apply env var substitution (${VAR} in host/user/key fields)
   ↓
 tunnel_manager.start_tunnel(profile, callback)
   ↓
 [Async spawn in background thread]
   ├─ Emit state: Connecting
   ├─ Spawn: ssh -i <key> -L <local>:<remote> -N <user>@<host>
+  ├─ Capture stderr into logs ring buffer (last 200 lines)
   ├─ TCP probe to localhost:<local_port> (max 10s)
   ├─ If port reachable: emit state: Connected
-  └─ If failed/timeout: emit state: Error
+  └─ If failed/timeout: emit state: Error (with SSH stderr)
   ↓
 Tauri event sent to frontend
   ↓
@@ -90,8 +101,6 @@ UI re-renders with green status indicator
 
 ### Auto-Reconnect
 
-When SSH process exits (detected via waitpid or process::close event):
-
 ```
 Process died
   ↓
@@ -99,61 +108,45 @@ TunnelManager detects exit
   ↓
 If profile.auto_reconnect && previously Connected
   ├─ Set state: Reconnecting (attempt 1/10)
-  ├─ Sleep: 2 seconds (base delay * 2^(attempt-1))
+  ├─ Sleep: 2^attempt seconds (max 60s)
   ├─ Spawn SSH again
-  ├─ If succeeds: Reset attempt counter, state: Connected
-  └─ If fails: Increment attempt, retry (or state: Error on max)
+  ├─ If succeeds: reset attempt counter → state: Connected
+  └─ If fails: increment attempt (or state: Error on max 10)
 ```
 
 ## State Management
 
 ### React Frontend
 
-Uses `useReducer` + context pattern. State shape:
+Zustand stores:
 
-```typescript
-{
-  profiles: ConnectionProfile[];           // All saved profiles
-  tunnelStates: Map<id, TunnelState>;     // Live status per profile
-  selectedId: string | null;               // Currently selected connection
-  showForm: boolean;                       // Show create/edit form
-  editingProfile: ConnectionProfile | null; // Profile being edited
-}
-```
-
-Actions dispatch to update state, triggering re-renders.
+| Store | Purpose |
+|-------|---------|
+| `profileStore` | All saved profiles + CRUD |
+| `tunnelStore` | Live tunnel states map |
+| `historyStore` | Connection history log |
+| `envStore` | Environment variable sets |
 
 ### Rust Backend
 
-TunnelManager holds:
+`TunnelManager` holds a `RwLock<HashMap<profile_id, ManagedTunnel>>`:
+
 ```rust
-HashMap<profile_id, ManagedTunnel>
-  ├─ process: Option<Child>           // SSH process handle
-  ├─ state: TunnelState               // Current status
-  └─ reconnect_timer: Option<Thread>  // Backoff timer (if reconnecting)
-```
-
-All mutation is protected by `RwLock`.
-
-### Persistent Storage
-
-JSON file at `~/.config/Porthole/config.json`:
-
-```json
-{
-  "profiles": [
-    {
-      "id": "uuid",
-      "name": "Staging Postgres",
-      "ssh_user": "ec2-user",
-      ...
-    }
-  ],
-  "window_bounds": { "x": 100, "y": 200, "width": 1024, "height": 700 }
+ManagedTunnel {
+  process: Option<Child>,          // SSH process handle
+  state: TunnelState,              // Current status
+  logs: VecDeque<String>,          // Last 200 lines of SSH stderr
+  reconnect_handle: Option<JoinHandle<()>>,
 }
 ```
 
-Loaded on app startup, updated whenever profile is created/updated/deleted.
+### Persistent Storage
+
+SQLite database at `~/.config/Porthole/porthole.db`:
+
+- `profiles` table — connection profiles
+- `history` table — connection events with timestamps
+- `environments` table — named env var sets
 
 ## SSH Process Management
 
@@ -163,11 +156,11 @@ Loaded on app startup, updated whenever profile is created/updated/deleted.
 Command::new("ssh")
   .args([
     "-i", "<identity_file>",
-    "-L", "5433:target-host:5432",     // Port forward
-    "-N",                               // No remote command
-    "-o", "ServerAliveInterval=15",    // Keepalive ping every 15s
-    "-o", "ServerAliveCountMax=3",     // Exit after 3 missed pings (45s)
-    "-o", "ExitOnForwardFailure=yes",  // Exit if -L bind fails
+    "-L", "5433:target-host:5432",
+    "-N",
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=3",
+    "-o", "ExitOnForwardFailure=yes",
     "-o", "StrictHostKeyChecking=accept-new",
     "-p", "22",
     "user@bastion-host"
@@ -177,10 +170,7 @@ Command::new("ssh")
   .spawn()
 ```
 
-Key options:
-- **ServerAliveInterval/CountMax**: SSH itself detects network failure and exits after 45s
-- **ExitOnForwardFailure**: Catches port binding errors early (e.g., port in use)
-- **StrictHostKeyChecking**: Accept new host keys but reject changed ones
+A background thread reads stderr into the logs ring buffer in real time.
 
 ### Verification
 
@@ -190,156 +180,76 @@ After spawn, the app runs a TCP probe:
 TcpStream::connect(("127.0.0.1", local_port))
 ```
 
-Retried every 500ms for up to 10 seconds. Success means tunnel is working.
+Retried every 500ms for up to 10 seconds.
 
 ### Cleanup
 
-On stop or disconnect:
 ```rust
-process.kill()
+process.kill()  // SIGTERM on Unix; TerminateProcess on Windows
 ```
-
-(Sending SIGTERM on Unix; TerminateProcess on Windows)
 
 ## IPC Commands
 
-### Request-Response
+| Command | Input | Output |
+|---------|-------|--------|
+| `list_profiles` | — | `Vec<ConnectionProfile>` |
+| `create_profile` | `profile` | `ConnectionProfile` |
+| `update_profile` | `profile` | `ConnectionProfile` |
+| `delete_profile` | `id` | `()` |
+| `start_tunnel` | `profileId, envVars` | `()` |
+| `stop_tunnel` | `profileId` | `()` |
+| `stop_all_tunnels` | — | `()` |
+| `get_tunnel_states` | — | `HashMap<id, TunnelState>` |
+| `get_tunnel_logs` | `profileId` | `Vec<String>` |
+| `export_profiles` | — | `path: String` |
+| `import_profiles` | — | `count: u32` |
+| `import_ssh_config` | — | `Vec<ConnectionProfile>` |
+| `check_ssh` | — | `{ available, version }` |
+| `find_next_available_port` | `port` | `u16` |
 
-| Command | Input | Output | Purpose |
-|---------|-------|--------|---------|
-| `list_profiles` | - | `Vec<ProfileProfile>` | Get all profiles |
-| `create_profile` | `profile: Profile` | `profile: Profile` (with id/timestamps) | Add profile |
-| `update_profile` | `profile: Profile` | `profile: Profile` (updated) | Modify profile |
-| `delete_profile` | `id: String` | `()` | Remove profile & stop tunnel |
-| `start_tunnel` | `profileId: String` | `()` | Spawn SSH |
-| `stop_tunnel` | `profileId: String` | `()` | Kill SSH |
-| `stop_all_tunnels` | - | `()` | Stop all active tunnels |
-| `get_tunnel_states` | - | `HashMap<id, State>` | Get all tunnel statuses |
-| `export_profiles` | - | `path: String` | Export to JSON file |
-| `import_profiles` | - | `count: u32` | Import from JSON file |
-| `check_ssh` | - | `{ available: bool, version: String }` | Verify SSH in PATH |
-
-### Push Events
+**Push events:**
 
 | Event | Payload | When |
 |-------|---------|------|
-| `tunnel-state-update` | `TunnelState` | Tunnel status changes |
+| `tunnel-state-update` | `TunnelState` | Status changes |
 
-Sent by backend, listened to by React via `listen()` hook.
+## CLI (`cli/`)
 
-## Error Handling
+Built with Clap v4, shares types with `porthole-core`. Commands:
 
-### SSH Failures
-
-Capture stderr on spawn:
-- Port already in use → "ExitOnForwardFailure=yes" causes SSH to exit with error
-- Bad key → SSH error message captured and stored
-- Host unreachable → Timeout/connection refused
-
-Errors displayed in UI under the connection detail.
-
-### Re-attempt Logic
-
-On unexpected exit, check `profile.auto_reconnect`:
-- If true: Start exponential backoff timer, re-spawn
-- If false: Mark as error, stop retrying
-- Max 10 attempts; after that, give up and show error
-
-User can manually "Retry" which resets the counter.
+```
+porthole ls [--tag]
+porthole connect <name> [-d]
+porthole disconnect <name>
+porthole status
+porthole scan <port>
+porthole kill <port>
+porthole add
+porthole rm <name>
+porthole export [--output]
+porthole import <file>
+porthole env list|set|unset
+```
 
 ## Security Considerations
 
-### SSH Keys
+- SSH key paths stored, never key material
+- System SSH handles all crypto — we never touch keys
+- SQLite config is user-readable plaintext (no encryption yet)
+- `StrictHostKeyChecking=accept-new` — trusts first-seen host keys, rejects changed keys
 
-- Paths stored as-is (e.g., `~/.ssh/id_rsa`)
-- No key material in config (only path)
-- SSH CLI is used (never our code handling keys)
-- User's SSH agent is honored (can use passphrases, security keys)
+## Performance
 
-### StrictHostKeyChecking
+| Operation | Latency |
+|-----------|---------|
+| App startup + config load | ~1s |
+| Connect (spawn + TCP probe) | ~1s |
+| UI render | ~100ms |
+| Per-tunnel memory (SSH process) | ~30MB |
 
-Set to `accept-new`:
-- Trusts host key on first connection
-- Rejects changed keys on subsequent connections
-- Prevents MITM on subsequent uses (but not initial)
+## Known Limitations
 
-For production: Consider `known_hosts` validation or better host key management.
-
-### Config Storage
-
-- JSON in plaintext (no encryption)
-- Located in `~/.config/` (user-readable)
-- SSH key paths are relative to home or absolute
-
-For sensitive deployments: Add encryption layer (see Phase 2/3 TODOs).
-
-## Performance Characteristics
-
-### Startup
-
-- Read config.json: ~1ms
-- Deserialize profiles: ~10ms (for 50 profiles)
-- Render UI: ~100ms (React)
-
-### Connection
-
-- Spawn SSH: ~100ms
-- TCP probe (success): ~500ms average
-- **Total**: ~1s from click to "Connected"
-
-### Memory
-
-- Per tunnel: ~30MB (SSH process)
-- Multiple tunnels: Roughly linear  add  30MB per connection
-- Frontend: ~50MB (React + Tauri)
-
-### Reconnect
-
-- Backoff: 2s → 4s → 8s → 16s → 32s → 60s → 60s → ...
-- Max cumulative duration: ~2 minutes (10 attempts)
-
-## Scaling Limits
-
-### Current Design Handles:
-
-- **10+ simultaneous tunnels** without issue
-- **100+ profiles** in config (though JSON parsing slows)
-- **Long-lived connections** (days/weeks, depending on network)
-
-### Future Optimizations:
-
-- Replace JSON store with SQLite for >100 profiles
-- Implement background process pooling (fork/spawn per tunnel family)
-- Add system tray to reduce memory when minimized
-- Lazy-load config sections
-
-## Testing Strategy
-
-### Unit Tests (Future)
-
-- Tunnel manager: spawn/kill/reconnect logic
-- Store: serialize/deserialize, CRUD operations
-- TCP probe: timeout/retry behavior
-
-### Integration Tests (Future)
-
-- Create profile → export → import → verify data
-- Start tunnel → network change → auto-reconnect detected
-- Multiple tunnels: independent lifecycle
-
-### E2E Tests (Future)
-
-- UI flow: create → select → connect → see status
-- Error handling: bad key → see error message
-- Import/export: JSON validation
-
-## Known Limitations & TODOs
-
-1. **No file picker** — Select SSH key via text input (can type path)
-2. **No encryption** — SSH keys stored in plaintext in config
-3. **No system tray** — App must stay open to maintain tunnels
-4. **No notifications** — No alerts on reconnect or failure
-5. **No logging** — Debug output sent to stderr only
-6. **Limited platforms** — macOS primary; Windows/Linux untested
-
-See README and DEVELOPMENT.md for roadmap.
+1. No system tray — app must stay open to maintain tunnels
+2. No notifications on reconnect/failure
+3. No encryption for stored configs
+4. macOS is primary target; Windows/Linux tested but less polished

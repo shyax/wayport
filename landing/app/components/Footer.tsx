@@ -34,11 +34,12 @@ const allLinks = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Download", href: "#download" },
-  { label: "Changelog", href: "https://github.com/porthole-app/porthole/releases", external: true },
+  { label: "Changelog", href: "https://github.com/shyax/porthole/releases", external: true },
   { label: "Documentation", href: "https://docs.porthole.dev", external: true },
-  { label: "GitHub", href: "https://github.com/porthole-app/porthole", external: true },
+  { label: "GitHub", href: "https://github.com/shyax/porthole", external: true },
   { label: "Twitter", href: "https://twitter.com/porthole_app", external: true },
   { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ];
 
 export default function Footer() {
@@ -94,7 +95,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-sm text-text-muted">
-            &copy; 2026 Porthole. MIT License &nbsp;·&nbsp; Open Source
+            &copy; 2026 Porthole. All rights reserved.
           </p>
           <p className="text-sm text-text-muted">
             Built with{" "}

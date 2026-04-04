@@ -9,7 +9,7 @@ const navLinks = [
   { label: "Pricing", href: "#pricing" },
   {
     label: "GitHub",
-    href: "https://github.com/porthole-app/porthole",
+    href: "https://github.com/shyax/porthole",
     external: true,
   },
 ];
