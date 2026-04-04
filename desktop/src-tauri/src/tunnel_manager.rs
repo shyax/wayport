@@ -276,6 +276,10 @@ impl TunnelManager {
         false
     }
 
+    pub fn has_tunnel(&self, profile_id: &str) -> bool {
+        self.tunnels.read().contains_key(profile_id)
+    }
+
     pub fn stop_tunnel(&self, profile_id: &str) {
         let mut tunnels = self.tunnels.write();
         if let Some(tunnel) = tunnels.remove(profile_id) {

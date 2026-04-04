@@ -39,6 +39,8 @@ export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => {
     loadHistory(workspaceId);
+    const poll = setInterval(() => loadHistory(workspaceId), 5000);
+    return () => clearInterval(poll);
   }, [workspaceId, loadHistory]);
 
   const filteredEntries = sourceFilter === "all"

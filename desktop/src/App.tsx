@@ -59,6 +59,11 @@ export default function App() {
 
     api.getTunnelStates().then(setTunnelStates);
 
+    // Poll every 5s to pick up tunnels started/stopped by the CLI
+    const poll = setInterval(() => {
+      api.getTunnelStates().then(setTunnelStates);
+    }, 5000);
+
     const unlisten = api.onTunnelStateUpdate((state) => {
       updateTunnelState(state);
       const { profiles } = useProfileStore.getState();
@@ -98,6 +103,7 @@ export default function App() {
       }
     });
     return () => {
+      clearInterval(poll);
       unlisten.then((fn) => fn());
     };
   }, []);

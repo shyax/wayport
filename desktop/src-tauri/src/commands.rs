@@ -137,7 +137,35 @@ pub fn stop_all_tunnels(tunnel_manager: State<TunnelManager>) -> Result<(), Stri
 
 #[tauri::command]
 pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>) -> std::collections::HashMap<String, TunnelState> {
-    tunnel_manager.get_states()
+    let mut states = tunnel_manager.get_states();
+
+    // Merge in CLI-started tunnels from PID files
+    for (profile_id, _pid, _source) in porthole_core::pid::list_active_tunnels() {
+        if !states.contains_key(&profile_id) {
+            states.insert(profile_id.clone(), crate::types::TunnelState {
+                profile_id,
+                status: crate::types::TunnelStatus::Connected,
+                error: None,
+                connected_since: None,
+                reconnect_attempt: 0,
+            });
+        }
+    }
+
+    // Remove stale entries for tunnels whose PID files no longer exist
+    states.retain(|id, state| {
+        if state.status == crate::types::TunnelStatus::Connected {
+            // If it's connected but not in our tunnel manager, verify PID still alive
+            if !tunnel_manager.has_tunnel(id) {
+                return porthole_core::pid::read_pid(id)
+                    .map(|(pid, _)| porthole_core::pid::is_process_alive(pid))
+                    .unwrap_or(false);
+            }
+        }
+        true
+    });
+
+    states
 }
 
 #[tauri::command]
