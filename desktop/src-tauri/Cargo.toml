@@ -31,4 +31,5 @@ parking_lot = "0.12"
 dirs = "5.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 tauri-plugin-dialog = "2.6.0"
+tauri-plugin-single-instance = "2.4.0"
 

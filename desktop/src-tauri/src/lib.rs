@@ -12,6 +12,13 @@ pub fn run() {
   let context = tauri::generate_context!();
 
   tauri::Builder::default()
+    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+      // Second launch: focus the existing window instead of opening a new one
+      if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+      }
+    }))
     .setup(|app| {
       app.handle().plugin(tauri_plugin_dialog::init())?;
 

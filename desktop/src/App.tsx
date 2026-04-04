@@ -59,9 +59,12 @@ export default function App() {
 
     api.getTunnelStates().then(setTunnelStates);
 
-    // Poll every 5s to pick up tunnels started/stopped by the CLI
+    // Poll every 5s to sync with CLI and other running instances
     const poll = setInterval(() => {
       api.getTunnelStates().then(setTunnelStates);
+      loadProfiles();
+      loadFolders("local");
+      loadEnvironments("local");
     }, 5000);
 
     const unlisten = api.onTunnelStateUpdate((state) => {
