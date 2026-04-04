@@ -98,7 +98,7 @@ fn apply_env_vars(mut profile: ConnectionProfile, vars: &std::collections::HashM
     let sub = |s: &str| -> String {
         let mut result = s.to_string();
         for (key, value) in vars {
-            result = result.replace(&format!("${{{}}}", key), value);
+            result = result.replace(&format!("{{{{{}}}}}", key), value);
         }
         result
     };
