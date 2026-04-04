@@ -46,7 +46,7 @@ export default function App() {
   } = useProfileStore();
 
   const { activeWorkspaceId, loadWorkspaces } = useWorkspaceStore();
-  const { folders, loadFolders } = useFolderStore();
+  const { folders, loadFolders, expandFolder } = useFolderStore();
   const { loadEnvironments, getActiveVariables } = useEnvironmentStore();
   const { recordEvent } = useHistoryStore();
 
@@ -160,8 +160,9 @@ export default function App() {
   const handleUpdate = useCallback(
     async (data: ConnectionProfile) => {
       await updateProfile(data);
+      if (data.folder_id) expandFolder(data.folder_id);
     },
-    [updateProfile],
+    [updateProfile, expandFolder],
   );
 
   const handleConnect = useCallback(

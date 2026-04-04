@@ -16,6 +16,7 @@ interface FolderState {
   renameFolder: (folder: Folder, name: string) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
   toggleExpanded: (id: string) => void;
+  expandFolder: (id: string) => void;
 }
 
 export const useFolderStore = create<FolderState>((set, get) => ({
@@ -65,6 +66,13 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       const next = new Set(s.expandedIds);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return { expandedIds: next };
+    }),
+
+  expandFolder: (id) =>
+    set((s) => {
+      const next = new Set(s.expandedIds);
+      next.add(id);
       return { expandedIds: next };
     }),
 }));
