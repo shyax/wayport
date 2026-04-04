@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import {
   Trash2,
   Edit2,
@@ -10,7 +11,13 @@ import {
   ArrowLeft,
   Globe,
   AlertCircle,
+  Copy,
+  Tag,
+  Terminal,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import * as api from "../lib/api";
 import type { ConnectionProfile, TunnelState, TunnelStatus } from "../lib/types";
 
 interface ConnectionDetailProps {
@@ -20,6 +27,7 @@ interface ConnectionDetailProps {
   onDisconnect: (id: string) => void;
   onEdit: () => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (profile: ConnectionProfile) => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -120,6 +128,7 @@ export function ConnectionDetail({
   onDisconnect,
   onEdit,
   onDelete,
+  onDuplicate,
 }: ConnectionDetailProps) {
   const status = tunnelState?.status ?? "disconnected";
   const isConnected = status === "connected";
@@ -163,6 +172,16 @@ export function ConnectionDetail({
 
         {/* Action buttons */}
         <div className="flex gap-2">
+          {onDuplicate && (
+            <button
+              onClick={() => onDuplicate(profile)}
+              className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-accent hover:border-accent/30 cursor-pointer transition-colors duration-150"
+              title="Duplicate"
+              aria-label="Duplicate connection"
+            >
+              <Copy size={15} />
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
@@ -181,6 +200,21 @@ export function ConnectionDetail({
           </button>
         </div>
       </div>
+
+      {/* Tags */}
+      {profile.tags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Tag size={12} className="text-text-muted" />
+          {profile.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-[11px] px-2 py-0.5 rounded-md bg-accent/10 text-accent border border-accent/20 font-medium"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Port Forwarding Diagram */}
       <div className="p-4 rounded-xl bg-bg-elevated border border-border">
@@ -246,6 +280,11 @@ export function ConnectionDetail({
         </div>
       )}
 
+      {/* SSH Logs */}
+      {(isConnected || status === "error") && (
+        <LogsPanel profileId={profile.id} />
+      )}
+
       {/* Connect / Disconnect */}
       <div>
         {isConnected ? (
@@ -267,6 +306,56 @@ export function ConnectionDetail({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function LogsPanel({ profileId }: { profileId: string }) {
+  const [logs, setLogs] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState(false);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      const data = await api.getTunnelLogs(profileId);
+      setLogs(data);
+    } catch {
+      // No logs available
+    }
+  }, [profileId]);
+
+  useEffect(() => {
+    if (expanded) {
+      fetchLogs();
+      const interval = setInterval(fetchLogs, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [expanded, fetchLogs]);
+
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 bg-surface hover:bg-surface-hover cursor-pointer transition-colors text-left"
+      >
+        <Terminal size={14} className="text-text-muted" />
+        <span className="text-xs font-medium text-text-secondary flex-1">SSH Logs</span>
+        {expanded ? (
+          <ChevronDown size={14} className="text-text-muted" />
+        ) : (
+          <ChevronRight size={14} className="text-text-muted" />
+        )}
+      </button>
+      {expanded && (
+        <div className="max-h-48 overflow-y-auto bg-[#0a0a0a] p-3">
+          {logs.length === 0 ? (
+            <p className="text-[11px] text-text-muted font-mono">No log output</p>
+          ) : (
+            <pre className="text-[11px] text-text-secondary font-mono whitespace-pre-wrap leading-relaxed">
+              {logs.join("\n")}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }
