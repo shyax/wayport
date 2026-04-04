@@ -14,6 +14,10 @@ impl Default for ForwardingType {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 fn default_workspace_id() -> String {
     "local".to_string()
 }
@@ -24,6 +28,7 @@ fn default_version() -> i32 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionProfile {
+    #[serde(default)]
     pub id: String,
     pub name: String,
     #[serde(default)]
@@ -31,17 +36,22 @@ pub struct ConnectionProfile {
     pub ssh_user: String,
     pub bastion_host: String,
     pub bastion_port: u16,
+    #[serde(default)]
     pub identity_file: String,
     pub local_port: u16,
     #[serde(default)]
     pub remote_host: Option<String>,
     #[serde(default)]
     pub remote_port: Option<u16>,
+    #[serde(default = "default_true")]
     pub auto_reconnect: bool,
     #[serde(default)]
     pub jump_hosts: Vec<JumpHost>,
+    #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default)]
     pub created_at: String,
+    #[serde(default)]
     pub updated_at: String,
     #[serde(default = "default_workspace_id")]
     pub workspace_id: String,

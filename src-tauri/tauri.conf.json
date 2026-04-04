@@ -15,6 +15,8 @@
         "title": "Porthole",
         "width": 1024,
         "height": 700,
+        "minWidth": 680,
+        "minHeight": 480,
         "resizable": true,
         "fullscreen": false
       }

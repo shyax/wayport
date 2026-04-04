@@ -22,8 +22,12 @@ export const useHistoryStore = create<HistoryState>((set) => ({
 
   loadHistory: async (workspaceId, limit = 100) => {
     set({ isLoading: true });
-    const entries = await api.getHistory(workspaceId, limit);
-    set({ entries, isLoading: false });
+    try {
+      const entries = await api.getHistory(workspaceId, limit);
+      set({ entries, isLoading: false });
+    } catch {
+      set({ entries: [], isLoading: false });
+    }
   },
 
   recordEvent: async (workspaceId, profileId, profileName, action, details) => {
