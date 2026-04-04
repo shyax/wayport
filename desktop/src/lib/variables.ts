@@ -1,6 +1,6 @@
 import type { ConnectionProfile } from "./types";
 
-const VAR_PATTERN = /\{\{(\w+)\}\}/g;
+const VAR_PATTERN = /\{\{([\w-]+)\}\}/g;
 
 export function resolveTemplate(
   template: string,
