@@ -1,7 +1,7 @@
 use tauri::{State, AppHandle, Emitter};
 use uuid::Uuid;
 use chrono::Utc;
-use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, Workspace};
+use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, Workspace, ForwardingType};
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
 
@@ -68,6 +68,7 @@ pub fn delete_profile(id: String, store: State<Store>, tunnel_manager: State<Tun
 #[tauri::command]
 pub fn start_tunnel(
     profile_id: String,
+    env_vars: Option<std::collections::HashMap<String, String>>,
     store: State<Store>,
     tunnel_manager: State<TunnelManager>,
     app: AppHandle,
@@ -78,12 +79,41 @@ pub fn start_tunnel(
         .find(|p| p.id == profile_id)
         .ok_or("Profile not found")?;
 
+    // Apply environment variable substitution
+    let profile = if let Some(vars) = env_vars {
+        apply_env_vars(profile, &vars)
+    } else {
+        profile
+    };
+
     let app_clone = app.clone();
     tunnel_manager.start_tunnel(profile, move |state| {
         let _ = app_clone.emit("tunnel-state-update", &state);
     });
 
     Ok(())
+}
+
+fn apply_env_vars(mut profile: ConnectionProfile, vars: &std::collections::HashMap<String, String>) -> ConnectionProfile {
+    let sub = |s: &str| -> String {
+        let mut result = s.to_string();
+        for (key, value) in vars {
+            result = result.replace(&format!("${{{}}}", key), value);
+        }
+        result
+    };
+
+    profile.bastion_host = sub(&profile.bastion_host);
+    profile.ssh_user = sub(&profile.ssh_user);
+    profile.identity_file = sub(&profile.identity_file);
+    if let Some(ref host) = profile.remote_host {
+        profile.remote_host = Some(sub(host));
+    }
+    for jh in &mut profile.jump_hosts {
+        jh.host = sub(&jh.host);
+        jh.user = sub(&jh.user);
+    }
+    profile
 }
 
 #[tauri::command]
@@ -101,6 +131,11 @@ pub fn stop_all_tunnels(tunnel_manager: State<TunnelManager>) -> Result<(), Stri
 #[tauri::command]
 pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>) -> std::collections::HashMap<String, TunnelState> {
     tunnel_manager.get_states()
+}
+
+#[tauri::command]
+pub fn get_tunnel_logs(profile_id: String, tunnel_manager: State<TunnelManager>) -> Vec<String> {
+    tunnel_manager.get_logs(&profile_id)
 }
 
 #[tauri::command]
@@ -290,4 +325,114 @@ pub fn get_preference(key: String, store: State<Store>) -> Option<String> {
 #[tauri::command]
 pub fn set_preference(key: String, value: String, store: State<Store>) -> Result<(), String> {
     store.database().set_preference(&key, &value)
+}
+
+// ---------------------------------------------------------------------------
+// SSH config import
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let config_path = home.join(".ssh").join("config");
+
+    if !config_path.exists() {
+        return Err("No ~/.ssh/config file found".to_string());
+    }
+
+    let content = std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read SSH config: {}", e))?;
+
+    let mut profiles = Vec::new();
+    let mut current_host: Option<String> = None;
+    let mut current_user = String::new();
+    let mut current_hostname = String::new();
+    let mut current_port: u16 = 22;
+    let mut current_identity = String::new();
+
+    let flush = |host: &str, user: &str, hostname: &str, port: u16, identity: &str| -> Option<ConnectionProfile> {
+        if host.is_empty() || host == "*" || hostname.is_empty() {
+            return None;
+        }
+        Some(ConnectionProfile {
+            id: String::new(),
+            name: host.to_string(),
+            forwarding_type: ForwardingType::Local,
+            ssh_user: if user.is_empty() { "root".to_string() } else { user.to_string() },
+            bastion_host: hostname.to_string(),
+            bastion_port: port,
+            identity_file: identity.to_string(),
+            local_port: 0,
+            remote_host: None,
+            remote_port: None,
+            auto_reconnect: true,
+            jump_hosts: Vec::new(),
+            tags: vec!["ssh-import".to_string()],
+            created_at: String::new(),
+            updated_at: String::new(),
+            workspace_id: "local".to_string(),
+            folder_id: None,
+            sort_order: 0,
+            version: 1,
+        })
+    };
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.splitn(2, char::is_whitespace).collect();
+        if parts.len() < 2 {
+            continue;
+        }
+
+        let key = parts[0].to_lowercase();
+        let value = parts[1].trim().to_string();
+
+        match key.as_str() {
+            "host" => {
+                // Flush previous host
+                if let Some(ref host) = current_host {
+                    if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+                        profiles.push(profile);
+                    }
+                }
+                current_host = Some(value);
+                current_user = String::new();
+                current_hostname = String::new();
+                current_port = 22;
+                current_identity = String::new();
+            }
+            "hostname" => current_hostname = value,
+            "user" => current_user = value,
+            "port" => current_port = value.parse().unwrap_or(22),
+            "identityfile" => current_identity = value.replace("~", &dirs::home_dir().map(|h| h.to_string_lossy().to_string()).unwrap_or_default()),
+            _ => {}
+        }
+    }
+
+    // Flush last host
+    if let Some(ref host) = current_host {
+        if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+            profiles.push(profile);
+        }
+    }
+
+    Ok(profiles)
+}
+
+// ---------------------------------------------------------------------------
+// Port conflict check
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn find_next_available_port(start_port: u16) -> Result<u16, String> {
+    for port in start_port..=65535 {
+        if std::net::TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            return Ok(port);
+        }
+    }
+    Err("No available ports found".to_string())
 }

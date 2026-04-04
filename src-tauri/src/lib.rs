@@ -44,6 +44,7 @@ pub fn run() {
       commands::stop_tunnel,
       commands::stop_all_tunnels,
       commands::get_tunnel_states,
+      commands::get_tunnel_logs,
       commands::check_ssh,
       commands::export_profiles,
       commands::import_profiles,
@@ -72,6 +73,9 @@ pub fn run() {
       // Preferences
       commands::get_preference,
       commands::set_preference,
+      // SSH config import + port utilities
+      commands::import_ssh_config,
+      commands::find_next_available_port,
     ])
     .run(context)
     .expect("error while running tauri application");

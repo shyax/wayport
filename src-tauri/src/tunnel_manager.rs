@@ -13,6 +13,7 @@ pub struct ManagedTunnel {
     pub process: Option<Child>,
     pub state: TunnelState,
     pub reconnect_timer: Option<std::thread::JoinHandle<()>>,
+    pub logs: Vec<String>,
 }
 
 pub struct TunnelManager {
@@ -32,6 +33,14 @@ impl TunnelManager {
             .iter()
             .map(|(k, v)| (k.clone(), v.state.clone()))
             .collect()
+    }
+
+    pub fn get_logs(&self, profile_id: &str) -> Vec<String> {
+        self.tunnels
+            .read()
+            .get(profile_id)
+            .map(|t| t.logs.clone())
+            .unwrap_or_default()
     }
 
     pub fn start_tunnel(
@@ -66,6 +75,7 @@ impl TunnelManager {
             process: None,
             state: connecting_state,
             reconnect_timer: None,
+            logs: Vec::new(),
         };
         tunnels.insert(profile_id.clone(), tunnel);
         drop(tunnels);
@@ -163,6 +173,31 @@ impl TunnelManager {
             .spawn()
         {
             Ok(mut child) => {
+                // Capture stderr in a background thread
+                let stderr_tunnels = tunnels.clone();
+                let stderr_profile_id = profile.id.clone();
+                if let Some(stderr) = child.stderr.take() {
+                    let stderr_tunnels = stderr_tunnels.clone();
+                    thread::spawn(move || {
+                        use std::io::{BufRead, BufReader};
+                        let reader = BufReader::new(stderr);
+                        for line in reader.lines() {
+                            if let Ok(line) = line {
+                                let mut tunnels = stderr_tunnels.write();
+                                if let Some(tunnel) = tunnels.get_mut(&stderr_profile_id) {
+                                    tunnel.logs.push(line);
+                                    // Keep last 200 lines
+                                    if tunnel.logs.len() > 200 {
+                                        tunnel.logs.drain(0..tunnel.logs.len() - 200);
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
+
                 thread::sleep(Duration::from_millis(500));
 
                 if Self::verify_tunnel(profile.forwarding_type, profile.local_port, &mut child) {
@@ -183,10 +218,24 @@ impl TunnelManager {
                 } else {
                     let _ = child.kill();
 
+                    // Read any captured stderr for a better error message
+                    let stderr_msg = {
+                        let tunnels = tunnels.read();
+                        tunnels.get(&profile.id)
+                            .and_then(|t| t.logs.last().cloned())
+                            .unwrap_or_default()
+                    };
+
+                    let error_msg = if stderr_msg.is_empty() {
+                        "Failed to establish tunnel - port not reachable".to_string()
+                    } else {
+                        format!("Tunnel failed: {}", stderr_msg)
+                    };
+
                     let error_state = TunnelState {
                         profile_id: profile.id.clone(),
                         status: TunnelStatus::Error,
-                        error: Some("Failed to establish tunnel - port not reachable".to_string()),
+                        error: Some(error_msg),
                         connected_since: None,
                         reconnect_attempt: 0,
                     };
