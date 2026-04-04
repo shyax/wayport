@@ -471,6 +471,56 @@ export function ConnectionForm({
           ))}
         </div>
 
+        {/* Tags */}
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">
+            Tags <span className="text-text-muted font-normal">(optional)</span>
+          </label>
+          <div
+            className="flex flex-wrap items-center gap-1.5 min-h-[38px] px-2 py-1.5 bg-surface border border-border rounded-lg focus-within:border-accent transition-colors"
+            onClick={() => document.getElementById("tag-input")?.focus()}
+          >
+            {form.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/15 text-accent text-xs rounded-md border border-accent/20"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setForm({ ...form, tags: form.tags.filter((t) => t !== tag) });
+                  }}
+                  className="hover:text-status-error cursor-pointer transition-colors"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </span>
+            ))}
+            <input
+              id="tag-input"
+              type="text"
+              placeholder={form.tags.length === 0 ? "e.g. production, database" : ""}
+              className="flex-1 min-w-[100px] bg-transparent text-text-primary text-sm placeholder-text-muted outline-none"
+              onKeyDown={(e) => {
+                const input = e.currentTarget;
+                if ((e.key === "Enter" || e.key === ",") && input.value.trim()) {
+                  e.preventDefault();
+                  const tag = input.value.trim().replace(/,/g, "");
+                  if (tag && !form.tags.includes(tag)) {
+                    setForm({ ...form, tags: [...form.tags, tag] });
+                  }
+                  input.value = "";
+                }
+                if (e.key === "Backspace" && !input.value && form.tags.length > 0) {
+                  setForm({ ...form, tags: form.tags.slice(0, -1) });
+                }
+              }}
+            />
+          </div>
+        </div>
+
         {/* Options */}
         <div className="flex items-center gap-2.5">
           <input
