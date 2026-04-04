@@ -83,13 +83,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   deleteProfile: async (id) => {
     await api.stopTunnel(id).catch(() => {});
     await api.deleteProfile(id);
-    set((s) => ({
-      profiles: s.profiles.filter((p) => p.id !== id),
-      selectedId: s.selectedId === id ? null : s.selectedId,
-      tunnelStates: Object.fromEntries(
-        Object.entries(s.tunnelStates).filter(([k]) => k !== id),
-      ),
-    }));
+    set((s) => {
+      const remaining = s.profiles.filter((p) => p.id !== id);
+      const nextSelected =
+        s.selectedId === id
+          ? (remaining[0]?.id ?? null)
+          : s.selectedId;
+      return {
+        profiles: remaining,
+        selectedId: nextSelected,
+        tunnelStates: Object.fromEntries(
+          Object.entries(s.tunnelStates).filter(([k]) => k !== id),
+        ),
+      };
+    });
   },
 
   moveToFolder: async (profileId, folderId) => {
