@@ -20,6 +20,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<SidebarView>("connections");
   const [searchQuery, setSearchQuery] = useState("");
   const pendingConnects = useRef<Set<string>>(new Set());
+  const activeConnections = useRef<Set<string>>(new Set());
+  const userDisconnects = useRef<Set<string>>(new Set());
 
   const {
     profiles,
@@ -59,20 +61,39 @@ export default function App() {
 
     const unlisten = api.onTunnelStateUpdate((state) => {
       updateTunnelState(state);
-      if (pendingConnects.current.has(state.profile_id)) {
-        if (state.status === "connected" || state.status === "error") {
+      const { profiles } = useProfileStore.getState();
+      const { activeWorkspaceId } = useWorkspaceStore.getState();
+      const { recordEvent } = useHistoryStore.getState();
+      const profile = profiles.find((p) => p.id === state.profile_id);
+      if (!profile) return;
+
+      const isPending = pendingConnects.current.has(state.profile_id);
+      const wasConnected = activeConnections.current.has(state.profile_id);
+      const isUserDisconnect = userDisconnects.current.has(state.profile_id);
+
+      if (state.status === "connected") {
+        activeConnections.current.add(state.profile_id);
+        if (isPending) {
           pendingConnects.current.delete(state.profile_id);
-          const profile = useProfileStore.getState().profiles.find((p) => p.id === state.profile_id);
-          if (profile) {
-            const { activeWorkspaceId } = useWorkspaceStore.getState();
-            const { recordEvent } = useHistoryStore.getState();
-            recordEvent(
-              activeWorkspaceId,
-              state.profile_id,
-              profile.name,
-              state.status === "connected" ? "connect" : "error",
-            );
-          }
+          recordEvent(activeWorkspaceId, state.profile_id, profile.name, "connect");
+        } else if (wasConnected) {
+          // reconnected after drop
+          recordEvent(activeWorkspaceId, state.profile_id, profile.name, "reconnect", "Auto-reconnected");
+        }
+      } else if (state.status === "error") {
+        activeConnections.current.delete(state.profile_id);
+        if (isPending) {
+          pendingConnects.current.delete(state.profile_id);
+          recordEvent(activeWorkspaceId, state.profile_id, profile.name, "error", state.error ?? undefined);
+        } else if (wasConnected) {
+          recordEvent(activeWorkspaceId, state.profile_id, profile.name, "error", state.error ?? "Connection dropped");
+        }
+      } else if (state.status === "disconnected") {
+        activeConnections.current.delete(state.profile_id);
+        userDisconnects.current.delete(state.profile_id);
+      } else if (state.status === "reconnecting") {
+        if (wasConnected && !isUserDisconnect) {
+          recordEvent(activeWorkspaceId, state.profile_id, profile.name, "reconnect", `Reconnecting (attempt ${state.reconnect_attempt})`);
         }
       }
     });
@@ -178,6 +199,7 @@ export default function App() {
   const handleDisconnect = useCallback(
     async (id: string) => {
       const profile = profiles.find((p) => p.id === id);
+      userDisconnects.current.add(id);
       await disconnect(id);
       if (profile) {
         await recordEvent(
