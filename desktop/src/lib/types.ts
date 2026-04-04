@@ -62,6 +62,8 @@ export interface ConnectionProfile {
   updated_at: string;
 }
 
+export type ActionSource = "gui" | "cli" | "api";
+
 export interface HistoryEntry {
   id: string;
   workspace_id: string;
@@ -72,6 +74,7 @@ export interface HistoryEntry {
   details: string | null;
   duration_secs: number | null;
   created_at: string;
+  source: ActionSource;
 }
 
 // --- Tunnel runtime ---

@@ -1,12 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Play,
   Square,
   AlertCircle,
   RefreshCw,
   Clock,
+  Terminal,
+  Monitor,
 } from "lucide-react";
 import { useHistoryStore } from "../stores/historyStore";
+import type { ActionSource } from "../lib/types";
 
 const ACTION_CONFIG: Record<
   string,
@@ -22,12 +25,25 @@ const ACTION_CONFIG: Record<
   },
 };
 
+const SOURCE_CONFIG: Record<ActionSource, { icon: typeof Terminal; label: string; color: string }> = {
+  cli: { icon: Terminal, label: "CLI", color: "text-accent bg-accent/10 border-accent/20" },
+  gui: { icon: Monitor, label: "Desktop", color: "text-text-muted bg-surface border-border" },
+  api: { icon: RefreshCw, label: "API", color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
+};
+
+type SourceFilter = "all" | ActionSource;
+
 export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
   const { entries, isLoading, loadHistory } = useHistoryStore();
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
 
   useEffect(() => {
     loadHistory(workspaceId);
   }, [workspaceId, loadHistory]);
+
+  const filteredEntries = sourceFilter === "all"
+    ? entries
+    : entries.filter((e) => e.source === sourceFilter);
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -44,9 +60,32 @@ export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
     return d.toLocaleDateString();
   };
 
+  const filters: { id: SourceFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "gui", label: "Desktop" },
+    { id: "cli", label: "CLI" },
+  ];
+
   return (
     <div className="max-w-3xl">
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-between mb-4">
+        {/* Source filter */}
+        <div className="flex gap-1 bg-surface p-0.5 rounded-md border border-border">
+          {filters.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setSourceFilter(id)}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium cursor-pointer transition-colors ${
+                sourceFilter === id
+                  ? "bg-accent text-white"
+                  : "text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => loadHistory(workspaceId)}
           className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
@@ -58,18 +97,22 @@ export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
 
       {isLoading ? (
         <p className="text-sm text-text-muted">Loading...</p>
-      ) : entries.length === 0 ? (
+      ) : filteredEntries.length === 0 ? (
         <div className="text-center py-12">
           <Clock size={32} className="text-text-muted mx-auto mb-3" />
           <p className="text-sm text-text-muted">
-            No connection history yet. Start a tunnel to see events here.
+            {sourceFilter !== "all"
+              ? `No ${sourceFilter.toUpperCase()} history entries`
+              : "No connection history yet. Start a tunnel to see events here."}
           </p>
         </div>
       ) : (
         <div className="space-y-1">
-          {entries.map((entry) => {
+          {filteredEntries.map((entry) => {
             const config = ACTION_CONFIG[entry.action] ?? ACTION_CONFIG.connect;
             const Icon = config.icon;
+            const source = SOURCE_CONFIG[entry.source ?? "gui"];
+            const SourceIcon = source.icon;
             return (
               <div
                 key={entry.id}
@@ -81,10 +124,13 @@ export function HistoryPanel({ workspaceId }: { workspaceId: string }) {
                     <span className="text-sm font-medium text-text-primary truncate">
                       {entry.profile_name}
                     </span>
-                    <span
-                      className={`text-[11px] font-medium ${config.color}`}
-                    >
+                    <span className={`text-[11px] font-medium ${config.color}`}>
                       {config.label}
+                    </span>
+                    {/* Source badge */}
+                    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border ${source.color}`}>
+                      <SourceIcon size={9} />
+                      {source.label}
                     </span>
                   </div>
                   {entry.details && (

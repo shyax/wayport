@@ -36,11 +36,12 @@ export const useHistoryStore = create<HistoryState>((set) => ({
       workspace_id: workspaceId,
       profile_id: profileId,
       profile_name: profileName,
-      user_display_name: "Local User",
+      user_display_name: "Desktop",
       action,
       details: details ?? null,
       duration_secs: null,
       created_at: new Date().toISOString(),
+      source: "gui",
     };
     await api.recordConnectionEvent(entry);
     set((s) => ({ entries: [entry, ...s.entries] }));
