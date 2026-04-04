@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import {
   Plus,
   Download,
@@ -6,6 +7,10 @@ import {
   Wrench,
   Clock,
   Zap,
+  Search,
+  X,
+  StopCircle,
+  FileCode2,
 } from "lucide-react";
 import { FolderTree } from "./FolderTree";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
@@ -30,6 +35,10 @@ interface SidebarProps {
   onImport: () => void;
   onExport: () => void;
   onSwitchView: (view: SidebarView) => void;
+  onStopAll?: () => void;
+  onImportSshConfig?: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 const NAV_ITEMS: { id: SidebarView; icon: typeof Cable; label: string }[] = [
@@ -51,10 +60,36 @@ export function Sidebar({
   onImport,
   onExport,
   onSwitchView,
+  onStopAll,
+  onImportSshConfig,
+  searchQuery,
+  onSearchChange,
 }: SidebarProps) {
+  const [showSearch, setShowSearch] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
   const activeCount = Object.values(tunnelStates).filter(
     (s) => s.status === "connected",
   ).length;
+
+  // Filter profiles by search query
+  const filteredProfiles = searchQuery
+    ? profiles.filter((p) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.bastion_host.toLowerCase().includes(q) ||
+          p.ssh_user.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q))
+        );
+      })
+    : profiles;
+
+  useEffect(() => {
+    if (showSearch) {
+      searchRef.current?.focus();
+    }
+  }, [showSearch]);
 
   return (
     <div className="flex h-full">
@@ -97,6 +132,29 @@ export function Sidebar({
               </h2>
               <div className="flex gap-0.5">
                 <button
+                  onClick={() => {
+                    setShowSearch(!showSearch);
+                    if (showSearch) onSearchChange("");
+                  }}
+                  className={`focus-ring p-1.5 rounded-md cursor-pointer transition-colors duration-150 ${
+                    showSearch
+                      ? "text-accent bg-accent/10"
+                      : "text-text-muted hover:text-text-secondary hover:bg-surface-hover"
+                  }`}
+                  title="Search (⌘K)"
+                >
+                  <Search size={13} />
+                </button>
+                {onImportSshConfig && (
+                  <button
+                    onClick={onImportSshConfig}
+                    className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
+                    title="Import from SSH config"
+                  >
+                    <FileCode2 size={13} />
+                  </button>
+                )}
+                <button
                   onClick={onImport}
                   className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
                   title="Import connections"
@@ -112,19 +170,51 @@ export function Sidebar({
                 </button>
               </div>
             </div>
+
+            {/* Search bar */}
+            {showSearch && (
+              <div className="relative mb-2">
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setShowSearch(false);
+                      onSearchChange("");
+                    }
+                  }}
+                  placeholder="Search connections..."
+                  className="w-full pl-7 pr-7 py-1.5 bg-surface border border-border rounded-md text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => onSearchChange("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
             <EnvironmentSwitcher />
           </div>
 
           <div className="flex-1 overflow-y-auto py-2 px-2">
-            {profiles.length === 0 && folders.length === 0 ? (
+            {filteredProfiles.length === 0 && folders.length === 0 ? (
               <div className="px-3 py-8 text-center">
                 <Cable size={20} className="text-text-muted mx-auto mb-2" />
-                <p className="text-[11px] text-text-muted">No connections yet</p>
+                <p className="text-[11px] text-text-muted">
+                  {searchQuery ? "No matching connections" : "No connections yet"}
+                </p>
               </div>
             ) : (
               <FolderTree
                 folders={folders}
-                profiles={profiles}
+                profiles={filteredProfiles}
                 tunnelStates={tunnelStates}
                 selectedId={selectedId}
                 workspaceId={workspaceId}
@@ -133,7 +223,16 @@ export function Sidebar({
             )}
           </div>
 
-          <div className="p-3 border-t border-border">
+          <div className="p-3 border-t border-border space-y-2">
+            {activeCount > 1 && onStopAll && (
+              <button
+                onClick={onStopAll}
+                className="focus-ring flex items-center justify-center gap-2 w-full py-1.5 px-3 bg-status-error/10 hover:bg-status-error/20 border border-status-error/20 text-status-error rounded-lg text-xs font-medium cursor-pointer transition-colors duration-150"
+              >
+                <StopCircle size={13} />
+                Stop All ({activeCount})
+              </button>
+            )}
             <button
               onClick={onAdd}
               className="focus-ring flex items-center justify-center gap-2 w-full py-2 px-3 bg-accent hover:bg-accent-hover text-bg rounded-lg text-sm font-semibold cursor-pointer transition-colors duration-150"
