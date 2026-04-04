@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { ConnectionDetail } from "./components/ConnectionDetail";
 import { ConnectionForm } from "./components/ConnectionForm";
@@ -15,10 +15,10 @@ import { useFolderStore } from "./stores/folderStore";
 import { useEnvironmentStore } from "./stores/environmentStore";
 import { useHistoryStore } from "./stores/historyStore";
 import type { ConnectionProfile, NewConnectionProfile } from "./lib/types";
-import { useState } from "react";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<SidebarView>("connections");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     profiles,
@@ -62,6 +62,51 @@ export default function App() {
     };
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+
+      // Cmd+N: New connection
+      if (meta && e.key === "n") {
+        e.preventDefault();
+        showCreateForm();
+        setCurrentView("connections");
+      }
+
+      // Cmd+K: Toggle search
+      if (meta && e.key === "k") {
+        e.preventDefault();
+        setCurrentView("connections");
+        setSearchQuery((prev) => (prev !== "" ? "" : prev));
+        // Focus the search by toggling it
+        const searchBtn = document.querySelector('[title="Search (⌘K)"]') as HTMLElement;
+        searchBtn?.click();
+      }
+
+      // Cmd+Shift+D: Disconnect all
+      if (meta && e.shiftKey && e.key === "d") {
+        e.preventDefault();
+        handleStopAll();
+      }
+
+      // Enter to connect selected (when not in form)
+      if (e.key === "Enter" && !showForm && selectedId && !e.target) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "BUTTON") {
+          e.preventDefault();
+          const state = tunnelStates[selectedId];
+          if (!state || state.status === "disconnected" || state.status === "error") {
+            handleConnect(selectedId);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showForm, selectedId, tunnelStates]);
+
   const selectedProfile = profiles.find((p) => p.id === selectedId);
   const selectedTunnelState = selectedId ? tunnelStates[selectedId] : undefined;
 
@@ -84,9 +129,29 @@ export default function App() {
       const profile = profiles.find((p) => p.id === id);
       if (!profile) return;
 
-      await connect(id);
+      // Check port availability before connecting
+      try {
+        const available = await api.checkPortAvailable(profile.local_port);
+        if (!available) {
+          const next = await api.findNextAvailablePort(profile.local_port);
+          const useNext = confirm(
+            `Port ${profile.local_port} is already in use.\n\nWould you like to use port ${next} instead?`
+          );
+          if (!useNext) return;
 
-      // Record history
+          // Update the profile with the new port
+          const updated = { ...profile, local_port: next };
+          await updateProfile(updated);
+        }
+      } catch {
+        // If check fails (e.g. no backend), proceed anyway
+      }
+
+      // Pass active environment variables for substitution
+      const envVars = getActiveVariables();
+      const hasVars = Object.keys(envVars).length > 0;
+      await connect(id, hasVars ? envVars : undefined);
+
       await recordEvent(
         activeWorkspaceId,
         id,
@@ -94,7 +159,7 @@ export default function App() {
         "connect",
       );
     },
-    [profiles, getActiveVariables, connect, recordEvent, activeWorkspaceId],
+    [profiles, connect, recordEvent, activeWorkspaceId, updateProfile, getActiveVariables],
   );
 
   const handleDisconnect = useCallback(
@@ -112,6 +177,42 @@ export default function App() {
     },
     [profiles, disconnect, recordEvent, activeWorkspaceId],
   );
+
+  const handleStopAll = useCallback(async () => {
+    await api.stopAllTunnels();
+    // Clear all tunnel states
+    setTunnelStates({});
+  }, [setTunnelStates]);
+
+  const handleDuplicate = useCallback(
+    async (profile: ConnectionProfile) => {
+      const { id, created_at, updated_at, version, ...rest } = profile;
+      const duplicate: NewConnectionProfile = {
+        ...rest,
+        name: `${profile.name} (copy)`,
+      };
+      await createProfile(duplicate);
+    },
+    [createProfile],
+  );
+
+  const handleImportSshConfig = useCallback(async () => {
+    try {
+      const sshProfiles = await api.importSshConfig();
+      if (sshProfiles.length === 0) {
+        alert("No hosts found in ~/.ssh/config");
+        return;
+      }
+      let imported = 0;
+      for (const p of sshProfiles) {
+        await createProfile(p);
+        imported++;
+      }
+      alert(`Imported ${imported} host${imported !== 1 ? "s" : ""} from SSH config`);
+    } catch (e) {
+      alert(`SSH config import failed: ${e}`);
+    }
+  }, [createProfile]);
 
   const handleSwitchView = useCallback((view: SidebarView) => {
     setCurrentView(view);
@@ -162,6 +263,7 @@ export default function App() {
           onDisconnect={handleDisconnect}
           onEdit={() => showEditForm(selectedProfile)}
           onDelete={deleteProfile}
+          onDuplicate={handleDuplicate}
         />
       );
     }
@@ -191,8 +293,12 @@ export default function App() {
             onImport={importProfiles}
             onExport={exportProfiles}
             onSwitchView={handleSwitchView}
+            onStopAll={handleStopAll}
+            onImportSshConfig={handleImportSshConfig}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
-          <main className="flex-1 overflow-y-auto p-8">
+          <main className="flex-1 min-w-0 overflow-y-auto p-8">
             {currentView !== "connections" && (
               <div className="mb-6">
                 <h1 className="text-lg font-semibold tracking-tight text-text-primary">
