@@ -27,7 +27,7 @@ interface ProfileState {
   deleteProfile: (id: string) => Promise<void>;
   moveToFolder: (profileId: string, folderId: string | null) => Promise<void>;
 
-  connect: (id: string) => Promise<void>;
+  connect: (id: string, envVars?: Record<string, string>) => Promise<void>;
   disconnect: (id: string) => Promise<void>;
 
   importProfiles: () => Promise<void>;
@@ -102,8 +102,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }));
   },
 
-  connect: async (id) => {
-    await api.startTunnel(id);
+  connect: async (id, envVars?: Record<string, string>) => {
+    await api.startTunnel(id, envVars);
   },
 
   disconnect: async (id) => {

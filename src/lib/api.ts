@@ -36,8 +36,8 @@ export async function deleteProfile(id: string): Promise<void> {
 
 // --- Tunnel management ---
 
-export async function startTunnel(profileId: string): Promise<void> {
-  return invoke("start_tunnel", { profileId });
+export async function startTunnel(profileId: string, envVars?: Record<string, string>): Promise<void> {
+  return invoke("start_tunnel", { profileId, envVars: envVars ?? null });
 }
 
 export async function stopTunnel(profileId: string): Promise<void> {
@@ -174,6 +174,24 @@ export async function setPreference(
   value: string,
 ): Promise<void> {
   return invoke("set_preference", { key, value });
+}
+
+// --- Tunnel logs ---
+
+export async function getTunnelLogs(profileId: string): Promise<string[]> {
+  return invoke("get_tunnel_logs", { profileId });
+}
+
+// --- SSH config import ---
+
+export async function importSshConfig(): Promise<ConnectionProfile[]> {
+  return invoke("import_ssh_config");
+}
+
+// --- Port conflict ---
+
+export async function findNextAvailablePort(startPort: number): Promise<number> {
+  return invoke("find_next_available_port", { startPort });
 }
 
 // --- Event listeners ---
