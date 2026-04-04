@@ -1,10 +1,30 @@
 use porthole_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::ActionSource, history};
 use crate::output;
 
+fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String {
+    let mut result = s.to_string();
+    for (k, v) in vars {
+        result = result.replace(&format!("{{{{{}}}}}", k), v);
+    }
+    result
+}
+
 pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
-    let profile = db.get_profile_by_name(workspace, name)
+    let mut profile = db.get_profile_by_name(workspace, name)
         .ok_or_else(|| format!("Profile \"{}\" not found. Run `porthole ls` to see available profiles.", name))?;
+
+    // Apply active environment variables
+    let envs = db.get_environments(workspace);
+    if let Some(env) = envs.iter().find(|e| e.is_default).or_else(|| envs.first()) {
+        let vars = &env.variables;
+        profile.ssh_user = resolve(&profile.ssh_user, vars);
+        profile.bastion_host = resolve(&profile.bastion_host, vars);
+        profile.identity_file = resolve(&profile.identity_file, vars);
+        if let Some(ref h) = profile.remote_host.clone() {
+            profile.remote_host = Some(resolve(h, vars));
+        }
+    }
 
     // Check if already connected via PID file
     if let Some((pid, _)) = pid::read_pid(&profile.id) {
