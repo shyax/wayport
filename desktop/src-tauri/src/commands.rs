@@ -117,8 +117,15 @@ fn apply_env_vars(mut profile: ConnectionProfile, vars: &std::collections::HashM
 }
 
 #[tauri::command]
-pub fn stop_tunnel(profile_id: String, tunnel_manager: State<TunnelManager>) -> Result<(), String> {
+pub fn stop_tunnel(profile_id: String, tunnel_manager: State<TunnelManager>, app: AppHandle) -> Result<(), String> {
     tunnel_manager.stop_tunnel(&profile_id);
+    let _ = app.emit("tunnel-state-update", crate::types::TunnelState {
+        profile_id,
+        status: crate::types::TunnelStatus::Disconnected,
+        error: None,
+        connected_since: None,
+        reconnect_attempt: 0,
+    });
     Ok(())
 }
 

@@ -20,9 +20,7 @@ function TerminalLine({ children, className = "" }: TerminalLineProps) {
 
 function TypedLine({ shouldType }: { shouldType: boolean }) {
   const shouldReduceMotion = useReducedMotion();
-  const [displayed, setDisplayed] = useState(
-    shouldReduceMotion ? TYPED_LINE : ""
-  );
+  const [displayed, setDisplayed] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
   const indexRef = useRef(0);
 

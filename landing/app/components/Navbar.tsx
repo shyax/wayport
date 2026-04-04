@@ -97,6 +97,7 @@ export default function Navbar() {
     if (external) return;
     e.preventDefault();
     setMenuOpen(false);
+    if (!href || href === "#") return;
     const target = document.querySelector(href);
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
