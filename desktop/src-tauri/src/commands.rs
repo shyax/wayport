@@ -5,6 +5,28 @@ use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelS
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
 
+/// Send a desktop notification if the user has notifications enabled.
+fn send_notification(app: &AppHandle, title: &str, body: &str) {
+    // Check user preference (default: enabled)
+    let enabled = app
+        .state::<Store>()
+        .database()
+        .get_preference("notifications_enabled")
+        .map(|v| v != "false")
+        .unwrap_or(true);
+
+    if !enabled {
+        return;
+    }
+
+    use tauri_plugin_notification::NotificationExt;
+    let _ = app.notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show();
+}
+
 /// Update the system tray tooltip with the current active tunnel count.
 pub fn update_tray_tooltip(app: &AppHandle) {
     let tm = app.state::<TunnelManager>();
@@ -15,17 +37,17 @@ pub fn update_tray_tooltip(app: &AppHandle) {
         .count();
 
     // Count CLI-started tunnels not already tracked by the GUI
-    for (profile_id, pid, _source) in porthole_core::pid::list_active_tunnels() {
-        if !states.contains_key(&profile_id) && porthole_core::pid::is_process_alive(pid) {
+    for (profile_id, pid, _source) in wayport_core::pid::list_active_tunnels() {
+        if !states.contains_key(&profile_id) && wayport_core::pid::is_process_alive(pid) {
             active += 1;
         }
     }
 
     if let Some(tray) = app.tray_by_id("main-tray") {
         let tooltip = match active {
-            0 => "Porthole — No active tunnels".to_string(),
-            1 => "Porthole — 1 active tunnel".to_string(),
-            n => format!("Porthole — {} active tunnels", n),
+            0 => "Wayport — No active tunnels".to_string(),
+            1 => "Wayport — 1 active tunnel".to_string(),
+            n => format!("Wayport — {} active tunnels", n),
         };
         let _ = tray.set_tooltip(Some(&tooltip));
     }
@@ -113,9 +135,37 @@ pub fn start_tunnel(
     };
 
     let app_clone = app.clone();
+    let profile_name = profile.name.clone();
+    let local_port = profile.local_port;
     tunnel_manager.start_tunnel(profile, move |state| {
         let _ = app_clone.emit("tunnel-state-update", &state);
         update_tray_tooltip(&app_clone);
+
+        match state.status {
+            TunnelStatus::Connected => {
+                send_notification(
+                    &app_clone,
+                    "Tunnel Connected",
+                    &format!("{} on port {}", profile_name, local_port),
+                );
+            }
+            TunnelStatus::Error => {
+                let msg = state.error.as_deref().unwrap_or("Unknown error");
+                send_notification(
+                    &app_clone,
+                    "Tunnel Failed",
+                    &format!("{}: {}", profile_name, msg),
+                );
+            }
+            TunnelStatus::Reconnecting => {
+                send_notification(
+                    &app_clone,
+                    "Tunnel Reconnecting",
+                    &format!("{} — attempt {}", profile_name, state.reconnect_attempt),
+                );
+            }
+            _ => {}
+        }
     });
 
     Ok(())
@@ -169,7 +219,7 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -
     let mut states = tunnel_manager.get_states();
 
     // Merge in CLI-started tunnels from PID files
-    for (profile_id, _pid, _source) in porthole_core::pid::list_active_tunnels() {
+    for (profile_id, _pid, _source) in wayport_core::pid::list_active_tunnels() {
         if !states.contains_key(&profile_id) {
             states.insert(profile_id.clone(), crate::types::TunnelState {
                 profile_id,
@@ -186,8 +236,8 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -
         if state.status == crate::types::TunnelStatus::Connected {
             // If it's connected but not in our tunnel manager, verify PID still alive
             if !tunnel_manager.has_tunnel(id) {
-                return porthole_core::pid::read_pid(id)
-                    .map(|(pid, _)| porthole_core::pid::is_process_alive(pid))
+                return wayport_core::pid::read_pid(id)
+                    .map(|(pid, _)| wayport_core::pid::is_process_alive(pid))
                     .unwrap_or(false);
             }
         }
@@ -200,9 +250,9 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -
         .count();
     if let Some(tray) = app.tray_by_id("main-tray") {
         let tooltip = match active {
-            0 => "Porthole — No active tunnels".to_string(),
-            1 => "Porthole — 1 active tunnel".to_string(),
-            n => format!("Porthole — {} active tunnels", n),
+            0 => "Wayport — No active tunnels".to_string(),
+            1 => "Wayport — 1 active tunnel".to_string(),
+            n => format!("Wayport — {} active tunnels", n),
         };
         let _ = tray.set_tooltip(Some(&tooltip));
     }
@@ -248,7 +298,7 @@ pub async fn export_profiles(store: State<'_, Store>) -> Result<String, String> 
 
     // Save to Downloads folder with timestamp
     let downloads = dirs::download_dir().ok_or("Could not find Downloads folder")?;
-    let filename = format!("porthole-config-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
+    let filename = format!("wayport-config-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
     let path = downloads.join(filename);
 
     std::fs::write(&path, export_data.to_string())
@@ -259,12 +309,12 @@ pub async fn export_profiles(store: State<'_, Store>) -> Result<String, String> 
 
 #[tauri::command]
 pub async fn import_profiles(store: State<'_, Store>) -> Result<u32, String> {
-    // For now, we'll look for porthole-config.json in the Downloads folder
+    // For now, we'll look for wayport-config.json in the Downloads folder
     let downloads = dirs::download_dir().ok_or("Could not find Downloads folder")?;
-    let path = downloads.join("porthole-config.json");
+    let path = downloads.join("wayport-config.json");
 
     if !path.exists() {
-        return Err("No porthole-config.json found in Downloads folder".to_string());
+        return Err("No wayport-config.json found in Downloads folder".to_string());
     }
 
     let content = std::fs::read_to_string(&path)
@@ -405,6 +455,29 @@ pub fn set_preference(key: String, value: String, store: State<Store>) -> Result
 }
 
 // ---------------------------------------------------------------------------
+// Autostart (launch at login)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_autostart_enabled(app: AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_autostart_enabled(enabled: bool, app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let autolaunch = app.autolaunch();
+    if enabled {
+        autolaunch.enable().map_err(|e| e.to_string())
+    } else {
+        autolaunch.disable().map_err(|e| e.to_string())
+    }
+}
+
+// ---------------------------------------------------------------------------
 // SSH config import
 // ---------------------------------------------------------------------------
 
@@ -512,4 +585,82 @@ pub fn find_next_available_port(start_port: u16) -> Result<u16, String> {
         }
     }
     Err("No available ports found".to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Connection test
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Serialize)]
+pub struct TestConnectionResult {
+    pub success: bool,
+    pub message: String,
+    pub latency_ms: u64,
+}
+
+#[tauri::command]
+pub async fn test_connection(
+    profile: ConnectionProfile,
+    env_vars: Option<std::collections::HashMap<String, String>>,
+) -> Result<TestConnectionResult, String> {
+    let profile = if let Some(vars) = env_vars {
+        apply_env_vars(profile, &vars)
+    } else {
+        profile
+    };
+
+    let mut args: Vec<String> = Vec::new();
+
+    if !profile.identity_file.is_empty() {
+        args.push("-i".into());
+        args.push(profile.identity_file.clone());
+    }
+
+    if !profile.jump_hosts.is_empty() {
+        let jumps: Vec<String> = profile
+            .jump_hosts
+            .iter()
+            .map(|jh| format!("{}@{}:{}", jh.user, jh.host, jh.port))
+            .collect();
+        args.push("-J".into());
+        args.push(jumps.join(","));
+    }
+
+    args.extend([
+        "-o".into(), "ConnectTimeout=10".into(),
+        "-o".into(), "BatchMode=yes".into(),
+        "-o".into(), "StrictHostKeyChecking=accept-new".into(),
+        "-p".into(), profile.bastion_port.to_string(),
+        format!("{}@{}", profile.ssh_user, profile.bastion_host),
+        "exit".into(),
+    ]);
+
+    let start = std::time::Instant::now();
+
+    match std::process::Command::new("ssh")
+        .args(&args)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .output()
+    {
+        Ok(output) => {
+            let latency_ms = start.elapsed().as_millis() as u64;
+            if output.status.success() {
+                Ok(TestConnectionResult {
+                    success: true,
+                    message: format!("Connected in {}ms", latency_ms),
+                    latency_ms,
+                })
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let msg = stderr.lines().last().unwrap_or("Connection failed").to_string();
+                Ok(TestConnectionResult {
+                    success: false,
+                    message: msg,
+                    latency_ms,
+                })
+            }
+        }
+        Err(e) => Err(format!("Failed to run SSH: {}", e)),
+    }
 }

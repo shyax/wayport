@@ -7,6 +7,7 @@ import { EmptyState } from "./components/EmptyState";
 import { PortUtilities } from "./components/PortUtilities";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { EnvironmentEditor } from "./components/EnvironmentEditor";
+import { SettingsPanel } from "./components/SettingsPanel";
 import * as api from "./lib/api";
 import { useProfileStore } from "./stores/profileStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
@@ -270,6 +271,7 @@ export default function App() {
     "port-tools": "Port Tools",
     history: "History",
     environments: "Environments",
+    settings: "Settings",
   };
 
   const renderMainContent = () => {
@@ -280,6 +282,8 @@ export default function App() {
         return <HistoryPanel workspaceId={activeWorkspaceId} />;
       case "environments":
         return <EnvironmentEditor />;
+      case "settings":
+        return <SettingsPanel />;
     }
 
     // Default: connections view

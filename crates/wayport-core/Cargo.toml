@@ -1,9 +1,9 @@
 [package]
-name = "porthole-core"
+name = "wayport-core"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "Shared library for Porthole SSH tunnel manager"
+description = "Shared library for Wayport SSH tunnel manager"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

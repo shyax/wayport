@@ -1,5 +1,5 @@
 use comfy_table::Cell;
-use porthole_core::{config, database::Database};
+use wayport_core::{config, database::Database};
 use crate::output;
 
 pub fn run(workspace: &str, limit: u32, source: Option<&str>, json: bool) -> Result<(), String> {

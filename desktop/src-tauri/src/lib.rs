@@ -8,6 +8,7 @@ pub mod port_utils;
 use tauri::Manager;
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +22,8 @@ pub fn run() {
         let _ = window.set_focus();
       }
     }))
+    .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+    .plugin(tauri_plugin_notification::init())
     .setup(|app| {
       app.handle().plugin(tauri_plugin_dialog::init())?;
 
@@ -42,11 +45,11 @@ pub fn run() {
       app.manage(port_monitor_manager);
 
       // ── System tray ──────────────────────────────────────────────────
-      let show_item = MenuItem::with_id(app, "show", "Show Porthole", true, None::<&str>)?;
+      let show_item = MenuItem::with_id(app, "show", "Show Wayport", true, None::<&str>)?;
       let sep1 = PredefinedMenuItem::separator(app)?;
       let disconnect_item = MenuItem::with_id(app, "disconnect_all", "Disconnect All", true, None::<&str>)?;
       let sep2 = PredefinedMenuItem::separator(app)?;
-      let quit_item = MenuItem::with_id(app, "quit", "Quit Porthole", true, None::<&str>)?;
+      let quit_item = MenuItem::with_id(app, "quit", "Quit Wayport", true, None::<&str>)?;
 
       let menu = Menu::with_items(app, &[
           &show_item,
@@ -59,7 +62,7 @@ pub fn run() {
       TrayIconBuilder::with_id("main-tray")
           .icon(app.default_window_icon().unwrap().clone())
           .menu(&menu)
-          .tooltip("Porthole — No active tunnels")
+          .tooltip("Wayport — No active tunnels")
           .on_menu_event(|app, event| {
               match event.id().as_ref() {
                   "show" => {
@@ -152,6 +155,11 @@ pub fn run() {
       // SSH config import + port utilities
       commands::import_ssh_config,
       commands::find_next_available_port,
+      // Autostart
+      commands::get_autostart_enabled,
+      commands::set_autostart_enabled,
+      // Connection test
+      commands::test_connection,
     ])
     .run(context)
     .expect("error while running tauri application");

@@ -1,4 +1,4 @@
-use porthole_core::{config, database::Database, pid, types::ActionSource, history};
+use wayport_core::{config, database::Database, pid, types::ActionSource, history};
 use crate::output;
 
 pub fn run(workspace: &str, name: &str) -> Result<(), String> {

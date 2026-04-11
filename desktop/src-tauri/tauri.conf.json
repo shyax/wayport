@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Porthole",
+  "productName": "Wayport",
   "version": "0.1.0",
-  "identifier": "com.shyax.porthole",
+  "identifier": "com.shyax.wayport",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Porthole",
+        "title": "Wayport",
         "width": 1024,
         "height": 700,
         "minWidth": 680,

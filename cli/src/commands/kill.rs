@@ -1,4 +1,4 @@
-use porthole_core::port_utils;
+use wayport_core::port_utils;
 use crate::output;
 
 pub fn run(port: u16) -> Result<(), String> {

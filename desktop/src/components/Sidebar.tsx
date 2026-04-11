@@ -12,6 +12,7 @@ import {
   StopCircle,
   FileCode2,
   MoreHorizontal,
+  Settings,
 } from "lucide-react";
 import { FolderTree } from "./FolderTree";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
@@ -42,11 +43,12 @@ interface SidebarProps {
   onSearchChange: (query: string) => void;
 }
 
-const NAV_ITEMS: { id: SidebarView; icon: typeof Cable; label: string }[] = [
+const NAV_ITEMS: { id: SidebarView; icon: typeof Cable; label: string; bottom?: boolean }[] = [
   { id: "connections", icon: Cable, label: "Connections" },
   { id: "port-tools", icon: Wrench, label: "Port Tools" },
   { id: "environments", icon: Zap, label: "Environments" },
   { id: "history", icon: Clock, label: "History" },
+  { id: "settings", icon: Settings, label: "Settings", bottom: true },
 ];
 
 export function Sidebar({
@@ -109,7 +111,7 @@ export function Sidebar({
     <div className="flex h-full">
       {/* Icon Rail */}
       <div className="w-[52px] bg-rail border-r border-border flex flex-col items-center py-3 gap-1 flex-shrink-0">
-        {NAV_ITEMS.map(({ id, icon: Icon, label }) => {
+        {NAV_ITEMS.filter((n) => !n.bottom).map(({ id, icon: Icon, label }) => {
           const isActive = currentView === id;
           return (
             <button
@@ -131,6 +133,27 @@ export function Sidebar({
                   {activeCount}
                 </span>
               )}
+            </button>
+          );
+        })}
+        <div className="flex-1" />
+        {NAV_ITEMS.filter((n) => n.bottom).map(({ id, icon: Icon, label }) => {
+          const isActive = currentView === id;
+          return (
+            <button
+              key={id}
+              onClick={() => onSwitchView(id)}
+              className={`relative w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 group ${
+                isActive
+                  ? "bg-rail-active text-accent"
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-hover"
+              }`}
+              title={label}
+            >
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-rail-indicator rounded-r-full" />
+              )}
+              <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
             </button>
           );
         })}

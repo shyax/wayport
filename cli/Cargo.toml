@@ -1,16 +1,16 @@
 [package]
-name = "porthole-cli"
+name = "wayport-cli"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "CLI for Porthole SSH tunnel manager"
+description = "CLI for Wayport SSH tunnel manager"
 
 [[bin]]
-name = "porthole"
+name = "wayport"
 path = "src/main.rs"
 
 [dependencies]
-porthole-core = { path = "../crates/porthole-core" }
+wayport-core = { path = "../crates/wayport-core" }
 clap = { version = "4", features = ["derive"] }
 comfy-table = "7"
 colored = "2"

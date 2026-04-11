@@ -6,21 +6,21 @@ pub fn db_path() -> PathBuf {
     // Tauri stores app data in ~/Library/Application Support/<identifier> on macOS
     let tauri_path = dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.shyax.porthole")
-        .join("porthole.db");
+        .join("com.shyax.wayport")
+        .join("wayport.db");
 
     if tauri_path.exists() {
         return tauri_path;
     }
 
     // Fallback: our own config dir (used when desktop app has never run)
-    config_dir().join("porthole.db")
+    config_dir().join("wayport.db")
 }
 
 pub fn config_dir() -> PathBuf {
     let dir = dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("Porthole");
+        .join("Wayport");
     std::fs::create_dir_all(&dir).ok();
     dir
 }

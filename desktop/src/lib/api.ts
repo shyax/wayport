@@ -194,6 +194,25 @@ export async function findNextAvailablePort(startPort: number): Promise<number> 
   return invoke("find_next_available_port", { startPort });
 }
 
+// --- Connection test ---
+
+export async function testConnection(
+  profile: ConnectionProfile | NewConnectionProfile,
+  envVars?: Record<string, string>,
+): Promise<{ success: boolean; message: string; latency_ms: number }> {
+  return invoke("test_connection", { profile, envVars: envVars ?? null });
+}
+
+// --- Autostart ---
+
+export async function getAutostartEnabled(): Promise<boolean> {
+  return invoke("get_autostart_enabled");
+}
+
+export async function setAutostartEnabled(enabled: boolean): Promise<void> {
+  return invoke("set_autostart_enabled", { enabled });
+}
+
 // --- Event listeners ---
 
 export function onTunnelStateUpdate(

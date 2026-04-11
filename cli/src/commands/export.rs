@@ -1,4 +1,4 @@
-use porthole_core::{config, database::Database};
+use wayport_core::{config, database::Database};
 use chrono::Local;
 use crate::output;
 
@@ -15,7 +15,7 @@ pub fn run(workspace: &str, output_path: Option<&str>) -> Result<(), String> {
     let path = output_path
         .map(|p| p.to_string())
         .unwrap_or_else(|| {
-            format!("porthole-export-{}.json", Local::now().format("%Y%m%d-%H%M%S"))
+            format!("wayport-export-{}.json", Local::now().format("%Y%m%d-%H%M%S"))
         });
 
     std::fs::write(&path, serde_json::to_string_pretty(&export_data).unwrap_or_default())

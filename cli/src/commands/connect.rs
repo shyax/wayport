@@ -1,4 +1,4 @@
-use porthole_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::ActionSource, history};
+use wayport_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::ActionSource, history};
 use crate::output;
 
 fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String {
@@ -12,7 +12,7 @@ fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String 
 pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
     let mut profile = db.get_profile_by_name(workspace, name)
-        .ok_or_else(|| format!("Profile \"{}\" not found. Run `porthole ls` to see available profiles.", name))?;
+        .ok_or_else(|| format!("Profile \"{}\" not found. Run `wayport ls` to see available profiles.", name))?;
 
     // Apply active environment variables
     let envs = db.get_environments(workspace);
@@ -35,7 +35,7 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
     }
 
     // Check port availability
-    if let Ok(false) = porthole_core::port_utils::check_port_available(profile.local_port) {
+    if let Ok(false) = wayport_core::port_utils::check_port_available(profile.local_port) {
         return Err(format!("Port {} is already in use", profile.local_port));
     }
 

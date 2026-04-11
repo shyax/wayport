@@ -1,5 +1,5 @@
 use comfy_table::{Cell, Color};
-use porthole_core::port_utils;
+use wayport_core::port_utils;
 use crate::output;
 
 pub fn run(port_arg: &str, json: bool) -> Result<(), String> {

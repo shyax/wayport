@@ -1,4 +1,4 @@
-use porthole_core::{config, database::Database, ssh_config, types::ActionSource, history};
+use wayport_core::{config, database::Database, ssh_config, types::ActionSource, history};
 use chrono::Utc;
 use crate::output;
 

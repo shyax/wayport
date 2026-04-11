@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Folder, Plus, Trash2 } from "lucide-react";
+import { Folder, Plus, Trash2, Zap, Check, X, Loader2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import * as api from "../lib/api";
 import {
@@ -51,6 +51,11 @@ export function ConnectionForm({
   const [keyPath, setKeyPath] = useState(form.identity_file);
   const [loading, setLoading] = useState(false);
   const [portConflict, setPortConflict] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const isPortValid = (p: number) => p > 0 && p < 65536;
   const localPortValid = isPortValid(form.local_port);
@@ -553,6 +558,20 @@ export function ConnectionForm({
           </label>
         </div>
 
+        {/* Test result */}
+        {testResult && (
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+              testResult.success
+                ? "bg-status-connected/10 text-status-connected border border-status-connected/20"
+                : "bg-status-error/10 text-status-error border border-status-error/20"
+            }`}
+          >
+            {testResult.success ? <Check size={14} /> : <X size={14} />}
+            {testResult.message}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2 pt-2">
           <button
@@ -561,6 +580,30 @@ export function ConnectionForm({
             className="focus-ring flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-bg rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150"
           >
             {loading ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            disabled={testing || !form.bastion_host || !form.ssh_user}
+            onClick={async () => {
+              setTesting(true);
+              setTestResult(null);
+              try {
+                const result = await api.testConnection(form);
+                setTestResult(result);
+              } catch (e) {
+                setTestResult({ success: false, message: String(e) });
+              } finally {
+                setTesting(false);
+              }
+            }}
+            className="focus-ring px-4 py-2.5 bg-surface hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed border border-border text-text-secondary rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center gap-1.5"
+          >
+            {testing ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Zap size={14} />
+            )}
+            {testing ? "Testing..." : "Test"}
           </button>
           <button
             type="button"

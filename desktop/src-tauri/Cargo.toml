@@ -1,10 +1,10 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "Porthole — SSH port-forwarding tunnel manager"
+description = "Wayport — SSH port-forwarding tunnel manager"
 authors = ["Shyam Sundar <yesweeyes.dev@gmail.com>"]
 license = "MIT"
-repository = "https://github.com/shyax/porthole"
+repository = "https://github.com/shyax/wayport"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.6", features = [] }
 
 [dependencies]
-porthole-core = { path = "../../crates/porthole-core" }
+wayport-core = { path = "../../crates/wayport-core" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
@@ -32,4 +32,6 @@ dirs = "5.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-single-instance = "2.4.0"
+tauri-plugin-autostart = "2"
+tauri-plugin-notification = "2"
 

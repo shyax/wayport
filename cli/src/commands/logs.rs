@@ -1,4 +1,4 @@
-use porthole_core::{config, database::Database, pid};
+use wayport_core::{config, database::Database, pid};
 
 pub fn run(workspace: &str, name: &str) -> Result<(), String> {
     let db = Database::new(config::db_path());

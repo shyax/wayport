@@ -1,5 +1,5 @@
 use comfy_table::Cell;
-use porthole_core::{config, database::Database};
+use wayport_core::{config, database::Database};
 use crate::output;
 
 pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String> {
@@ -19,16 +19,16 @@ pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String>
     }
 
     if profiles.is_empty() {
-        println!("No profiles found. Use \x1b[33mporthole import-ssh\x1b[0m to import from ~/.ssh/config.");
+        println!("No profiles found. Use \x1b[33mwayport import-ssh\x1b[0m to import from ~/.ssh/config.");
         return Ok(());
     }
 
     let mut table = output::table(&["Name", "Type", "Local", "Remote", "Tags"]);
     for p in &profiles {
         let flag = match p.forwarding_type {
-            porthole_core::types::ForwardingType::Local => "-L",
-            porthole_core::types::ForwardingType::Remote => "-R",
-            porthole_core::types::ForwardingType::Dynamic => "-D",
+            wayport_core::types::ForwardingType::Local => "-L",
+            wayport_core::types::ForwardingType::Remote => "-R",
+            wayport_core::types::ForwardingType::Dynamic => "-D",
         };
         let remote = match (&p.remote_host, p.remote_port) {
             (Some(h), Some(port)) => format!("{}:{}", h, port),
