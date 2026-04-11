@@ -171,18 +171,22 @@ export function ConnectionDetail({
       setStats(null);
       return;
     }
+    let cancelled = false;
     const fetchStats = async () => {
       try {
         const allStats = await api.getTunnelStats();
-        const s = allStats.find((s) => s.profile_id === profile.id) ?? null;
-        setStats(s);
+        if (!cancelled) {
+          const s = allStats.find((s) => s.profile_id === profile.id) ?? null;
+          setStats(s);
+        }
       } catch {
         // ignore
       }
     };
-    fetchStats();
+    // Fetch immediately then poll — setTimeout avoids synchronous setState in effect
+    const initial = setTimeout(fetchStats, 0);
     const interval = setInterval(fetchStats, 5000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearTimeout(initial); clearInterval(interval); };
   }, [isConnected, profile.id]);
   const isActive = status === "connecting" || status === "reconnecting";
   const statusInfo = STATUS_CONFIG[status];
@@ -467,9 +471,9 @@ function LogsPanel({ profileId }: { profileId: string }) {
 
   useEffect(() => {
     if (expanded) {
-      fetchLogs();
+      const initial = setTimeout(fetchLogs, 0);
       const interval = setInterval(fetchLogs, 3000);
-      return () => clearInterval(interval);
+      return () => { clearTimeout(initial); clearInterval(interval); };
     }
   }, [expanded, fetchLogs]);
 
