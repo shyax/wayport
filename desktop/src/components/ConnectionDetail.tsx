@@ -22,7 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import * as api from "../lib/api";
-import type { ConnectionProfile, TunnelState, TunnelStatus } from "../lib/types";
+import type { ConnectionProfile, TunnelState, TunnelStats, TunnelStatus } from "../lib/types";
 
 interface ConnectionDetailProps {
   profile: ConnectionProfile;
@@ -76,6 +76,7 @@ const TYPE_CONFIG: Record<string, { label: string; flag: string; color: string }
   local: { label: "Local Forward", flag: "-L", color: "text-accent bg-accent/10 border-accent/20" },
   remote: { label: "Remote Forward", flag: "-R", color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
   dynamic: { label: "SOCKS Proxy", flag: "-D", color: "text-status-connecting bg-status-connecting/10 border-status-connecting/20" },
+  kubernetes: { label: "K8s Port-Forward", flag: "kubectl", color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
 };
 
 function formatUptime(connectedSince: string | null): string {
@@ -87,7 +88,31 @@ function formatUptime(connectedSince: string | null): string {
   return `${minutes}m`;
 }
 
+function formatUptimeSecs(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return `${secs}s`;
+}
+
 function ForwardingDiagram({ profile }: { profile: ConnectionProfile }) {
+  if (profile.forwarding_type === "kubernetes") {
+    return (
+      <div className="flex items-center gap-3 font-mono text-sm">
+        <div className="px-3 py-2 rounded-lg bg-surface border border-border">
+          <span className="text-text-muted text-xs block">Local</span>
+          <span className="text-accent">localhost:{profile.local_port}</span>
+        </div>
+        <ArrowRight size={16} className="text-text-muted flex-shrink-0" />
+        <div className="px-3 py-2 rounded-lg bg-surface border border-border">
+          <span className="text-text-muted text-xs block">K8s {profile.k8s_namespace ?? "default"}</span>
+          <span className="text-blue-400">{profile.k8s_resource}:{profile.k8s_resource_port}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (profile.forwarding_type === "dynamic") {
     return (
       <div className="flex items-center gap-3 font-mono text-sm">
@@ -137,8 +162,28 @@ export function ConnectionDetail({
   onDuplicate,
 }: ConnectionDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [stats, setStats] = useState<TunnelStats | null>(null);
   const status = tunnelState?.status ?? "disconnected";
   const isConnected = status === "connected";
+
+  useEffect(() => {
+    if (!isConnected) {
+      setStats(null);
+      return;
+    }
+    const fetchStats = async () => {
+      try {
+        const allStats = await api.getTunnelStats();
+        const s = allStats.find((s) => s.profile_id === profile.id) ?? null;
+        setStats(s);
+      } catch {
+        // ignore
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, [isConnected, profile.id]);
   const isActive = status === "connecting" || status === "reconnecting";
   const statusInfo = STATUS_CONFIG[status];
   const StatusIcon = statusInfo.icon;
@@ -216,6 +261,14 @@ export function ConnectionDetail({
             </button>
           )}
           <button
+            onClick={() => api.openTerminal(profile.id)}
+            className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-accent hover:border-accent/30 cursor-pointer transition-colors duration-150"
+            title="Open Terminal"
+            aria-label="Open terminal session"
+          >
+            <Terminal size={15} />
+          </button>
+          <button
             onClick={onEdit}
             className="focus-ring p-2 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
             title="Edit"
@@ -274,46 +327,99 @@ export function ConnectionDetail({
         <ForwardingDiagram profile={profile} />
       </div>
 
+      {/* Traffic Stats */}
+      {isConnected && stats && (
+        <div className="p-4 rounded-xl bg-bg-elevated border border-border">
+          <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">
+            Traffic
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <span className="block text-xs text-text-muted">Active</span>
+              <span className="text-lg font-semibold text-text-primary tabular-nums">
+                {stats.active_connections}
+              </span>
+              <span className="text-xs text-text-muted ml-1">conn{stats.active_connections !== 1 ? "s" : ""}</span>
+            </div>
+            <div>
+              <span className="block text-xs text-text-muted">Total</span>
+              <span className="text-lg font-semibold text-text-primary tabular-nums">
+                {stats.total_connections}
+              </span>
+              <span className="text-xs text-text-muted ml-1">conn{stats.total_connections !== 1 ? "s" : ""}</span>
+            </div>
+            <div>
+              <span className="block text-xs text-text-muted">Uptime</span>
+              <span className="text-lg font-semibold text-text-primary tabular-nums">
+                {formatUptimeSecs(stats.uptime_secs)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Connection Details */}
       <div className="p-4 rounded-xl bg-bg-elevated border border-border">
         <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">
-          Connection
+          {profile.forwarding_type === "kubernetes" ? "Kubernetes" : "Connection"}
         </p>
         <div className="space-y-3">
-          <DetailRow
-            icon={<Server size={14} />}
-            label="Bastion"
-            value={`${profile.ssh_user}@${profile.bastion_host}:${profile.bastion_port}`}
-            mono
-          />
-          {profile.identity_file && (
-            <DetailRow
-              icon={<Key size={14} />}
-              label="SSH Key"
-              value={profile.identity_file}
-              mono
-            />
+          {profile.forwarding_type === "kubernetes" ? (
+            <>
+              {profile.k8s_context && (
+                <DetailRow icon={<Server size={14} />} label="Context" value={profile.k8s_context} mono />
+              )}
+              <DetailRow
+                icon={<Globe size={14} />}
+                label="Namespace"
+                value={profile.k8s_namespace ?? "default"}
+                mono
+              />
+              <DetailRow
+                icon={<Server size={14} />}
+                label="Resource"
+                value={profile.k8s_resource ?? ""}
+                mono
+              />
+            </>
+          ) : (
+            <>
+              <DetailRow
+                icon={<Server size={14} />}
+                label="Bastion"
+                value={`${profile.ssh_user}@${profile.bastion_host}:${profile.bastion_port}`}
+                mono
+              />
+              {profile.identity_file && (
+                <DetailRow
+                  icon={<Key size={14} />}
+                  label="SSH Key"
+                  value={profile.identity_file}
+                  mono
+                />
+              )}
+              {profile.jump_hosts.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <Globe size={14} className="text-text-muted mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs text-text-muted">Jump Hosts</span>
+                    <div className="mt-1 space-y-1">
+                      {profile.jump_hosts.map((jh, i) => (
+                        <span key={i} className="block text-sm font-mono text-purple-400">
+                          {jh.user}@{jh.host}:{jh.port}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <DetailRow
             icon={<RefreshCw size={14} />}
             label="Auto-reconnect"
             value={profile.auto_reconnect ? "Enabled" : "Disabled"}
           />
-          {profile.jump_hosts.length > 0 && (
-            <div className="flex items-start gap-3">
-              <Globe size={14} className="text-text-muted mt-0.5 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <span className="text-xs text-text-muted">Jump Hosts</span>
-                <div className="mt-1 space-y-1">
-                  {profile.jump_hosts.map((jh, i) => (
-                    <span key={i} className="block text-sm font-mono text-purple-400">
-                      {jh.user}@{jh.host}:{jh.port}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

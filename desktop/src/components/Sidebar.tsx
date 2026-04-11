@@ -13,17 +13,25 @@ import {
   FileCode2,
   MoreHorizontal,
   Settings,
+  Key,
+  Layers,
+  Pin,
 } from "lucide-react";
 import { FolderTree } from "./FolderTree";
+import { ConnectionItem } from "./ConnectionItem";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 import type { ConnectionProfile, Folder, TunnelState } from "../lib/types";
 
 export type SidebarView =
   | "connections"
+  | "groups"
   | "port-tools"
   | "history"
   | "environments"
+  | "ssh-keys"
   | "settings";
+
+type SidebarTab = "pinned" | "all" | "recent";
 
 interface SidebarProps {
   profiles: ConnectionProfile[];
@@ -32,6 +40,7 @@ interface SidebarProps {
   selectedId: string | null;
   currentView: SidebarView;
   workspaceId: string;
+  recentIds: string[];
   onSelect: (id: string) => void;
   onAdd: () => void;
   onImport: () => void;
@@ -39,16 +48,25 @@ interface SidebarProps {
   onSwitchView: (view: SidebarView) => void;
   onStopAll?: () => void;
   onImportSshConfig?: () => void;
+  onTogglePin?: (id: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
 
 const NAV_ITEMS: { id: SidebarView; icon: typeof Cable; label: string; bottom?: boolean }[] = [
   { id: "connections", icon: Cable, label: "Connections" },
+  { id: "groups", icon: Layers, label: "Groups" },
   { id: "port-tools", icon: Wrench, label: "Port Tools" },
   { id: "environments", icon: Zap, label: "Environments" },
   { id: "history", icon: Clock, label: "History" },
+  { id: "ssh-keys", icon: Key, label: "SSH Keys" },
   { id: "settings", icon: Settings, label: "Settings", bottom: true },
+];
+
+const TAB_ITEMS: { id: SidebarTab; label: string }[] = [
+  { id: "pinned", label: "Pinned" },
+  { id: "all", label: "All" },
+  { id: "recent", label: "Recent" },
 ];
 
 export function Sidebar({
@@ -58,6 +76,7 @@ export function Sidebar({
   selectedId,
   currentView,
   workspaceId,
+  recentIds,
   onSelect,
   onAdd,
   onImport,
@@ -65,11 +84,13 @@ export function Sidebar({
   onSwitchView,
   onStopAll,
   onImportSshConfig,
+  onTogglePin,
   searchQuery,
   onSearchChange,
 }: SidebarProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState<SidebarTab>("all");
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -101,11 +122,61 @@ export function Sidebar({
       })
     : profiles;
 
+  // Three-tier filtering
+  const pinnedProfiles = filteredProfiles.filter((p) => p.is_pinned);
+  const recentProfiles = recentIds
+    .map((id) => filteredProfiles.find((p) => p.id === id))
+    .filter((p): p is ConnectionProfile => p != null)
+    .slice(0, 5);
+
   useEffect(() => {
     if (showSearch) {
       searchRef.current?.focus();
     }
   }, [showSearch]);
+
+  // When searching, show all results regardless of tab
+  const isSearching = searchQuery.length > 0;
+
+  const renderProfileList = (profileList: ConnectionProfile[], emptyMessage: string) => {
+    if (profileList.length === 0) {
+      return (
+        <div className="px-3 py-6 text-center">
+          <p className="text-[11px] text-text-muted">{emptyMessage}</p>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-0.5">
+        {profileList.map((p) => (
+          <div key={p.id} className="group/item relative">
+            <ConnectionItem
+              profile={p}
+              tunnelState={tunnelStates[p.id]}
+              isSelected={selectedId === p.id}
+              onSelect={() => onSelect(p.id)}
+            />
+            {onTogglePin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePin(p.id);
+                }}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
+                  p.is_pinned
+                    ? "text-accent opacity-100"
+                    : "text-text-muted opacity-0 group-hover/item:opacity-100 hover:text-text-secondary"
+                }`}
+                title={p.is_pinned ? "Unpin" : "Pin"}
+              >
+                <Pin size={11} className={p.is_pinned ? "fill-current" : ""} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-full">
@@ -255,25 +326,68 @@ export function Sidebar({
             )}
 
             <EnvironmentSwitcher />
+
+            {/* Three-tier tabs */}
+            {!isSearching && (
+              <div className="flex gap-0.5 mt-2 bg-surface rounded-lg p-0.5">
+                {TAB_ITEMS.map((tab) => {
+                  const count =
+                    tab.id === "pinned" ? pinnedProfiles.length :
+                    tab.id === "recent" ? recentProfiles.length :
+                    filteredProfiles.length;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-1 text-[10px] font-medium py-1.5 rounded-md transition-all cursor-pointer ${
+                        activeTab === tab.id
+                          ? "bg-bg-elevated text-text-primary shadow-sm"
+                          : "text-text-muted hover:text-text-secondary"
+                      }`}
+                    >
+                      {tab.label}
+                      {count > 0 && (
+                        <span className="ml-1 text-text-muted">{count}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto py-2 px-2">
-            {filteredProfiles.length === 0 && folders.length === 0 ? (
-              <div className="px-3 py-8 text-center">
-                <Cable size={20} className="text-text-muted mx-auto mb-2" />
-                <p className="text-[11px] text-text-muted">
-                  {searchQuery ? "No matching connections" : "No connections yet"}
-                </p>
-              </div>
+            {isSearching ? (
+              // Search mode: show all matching profiles flat
+              filteredProfiles.length === 0 ? (
+                <div className="px-3 py-8 text-center">
+                  <Search size={20} className="text-text-muted mx-auto mb-2" />
+                  <p className="text-[11px] text-text-muted">No matching connections</p>
+                </div>
+              ) : (
+                renderProfileList(filteredProfiles, "")
+              )
+            ) : activeTab === "pinned" ? (
+              renderProfileList(pinnedProfiles, "No pinned connections. Right-click or hover to pin.")
+            ) : activeTab === "recent" ? (
+              renderProfileList(recentProfiles, "No recent connections yet.")
             ) : (
-              <FolderTree
-                folders={folders}
-                profiles={filteredProfiles}
-                tunnelStates={tunnelStates}
-                selectedId={selectedId}
-                workspaceId={workspaceId}
-                onSelectProfile={onSelect}
-              />
+              // All tab: show folder tree
+              filteredProfiles.length === 0 && folders.length === 0 ? (
+                <div className="px-3 py-8 text-center">
+                  <Cable size={20} className="text-text-muted mx-auto mb-2" />
+                  <p className="text-[11px] text-text-muted">No connections yet</p>
+                </div>
+              ) : (
+                <FolderTree
+                  folders={folders}
+                  profiles={filteredProfiles}
+                  tunnelStates={tunnelStates}
+                  selectedId={selectedId}
+                  workspaceId={workspaceId}
+                  onSelectProfile={onSelect}
+                />
+              )
             )}
           </div>
 

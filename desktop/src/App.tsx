@@ -2,12 +2,15 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { ConnectionDetail } from "./components/ConnectionDetail";
 import { ConnectionForm } from "./components/ConnectionForm";
+import { CommandPalette } from "./components/CommandPalette";
 import { StatusBar } from "./components/StatusBar";
 import { EmptyState } from "./components/EmptyState";
 import { PortUtilities } from "./components/PortUtilities";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { EnvironmentEditor } from "./components/EnvironmentEditor";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { SSHKeyManager } from "./components/SSHKeyManager";
+import { TunnelGroupPanel } from "./components/TunnelGroupPanel";
 import * as api from "./lib/api";
 import { useProfileStore } from "./stores/profileStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
@@ -19,6 +22,8 @@ import type { ConnectionProfile, NewConnectionProfile } from "./lib/types";
 export default function App() {
   const [currentView, setCurrentView] = useState<SidebarView>("connections");
   const [searchQuery, setSearchQuery] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const pendingConnects = useRef<Set<string>>(new Set());
   const activeConnections = useRef<Set<string>>(new Set());
   const userDisconnects = useRef<Set<string>>(new Set());
@@ -58,6 +63,7 @@ export default function App() {
     loadEnvironments("local");
 
     api.getTunnelStates().then(setTunnelStates);
+    api.getRecentProfiles("local", 5).then(setRecentIds).catch(() => {});
 
     // Poll every 5s to sync with CLI and other running instances
     const poll = setInterval(() => {
@@ -65,6 +71,7 @@ export default function App() {
       loadProfiles();
       loadFolders("local");
       loadEnvironments("local");
+      api.getRecentProfiles("local", 5).then(setRecentIds).catch(() => {});
     }, 5000);
 
     const unlisten = api.onTunnelStateUpdate((state) => {
@@ -123,14 +130,10 @@ export default function App() {
         setCurrentView("connections");
       }
 
-      // Cmd+K: Toggle search
+      // Cmd+K: Open command palette
       if (meta && e.key === "k") {
         e.preventDefault();
-        setCurrentView("connections");
-        setSearchQuery((prev) => (prev !== "" ? "" : prev));
-        // Focus the search by toggling it
-        const searchBtn = document.querySelector('[title="Search (⌘K)"]') as HTMLElement;
-        searchBtn?.click();
+        setPaletteOpen((prev) => !prev);
       }
 
       // Cmd+Shift+D: Disconnect all
@@ -241,6 +244,20 @@ export default function App() {
     [createProfile],
   );
 
+  const handleTogglePin = useCallback(
+    async (id: string) => {
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) return;
+      if (profile.is_pinned) {
+        await api.unpinProfile(id).catch(() => {});
+      } else {
+        await api.pinProfile(id).catch(() => {});
+      }
+      loadProfiles();
+    },
+    [profiles, loadProfiles],
+  );
+
   const handleImportSshConfig = useCallback(async () => {
     try {
       const sshProfiles = await api.importSshConfig();
@@ -268,20 +285,26 @@ export default function App() {
   ).length;
 
   const VIEW_TITLES: Record<string, string> = {
+    groups: "Tunnel Groups",
     "port-tools": "Port Tools",
     history: "History",
     environments: "Environments",
+    "ssh-keys": "SSH Keys",
     settings: "Settings",
   };
 
   const renderMainContent = () => {
     switch (currentView) {
+      case "groups":
+        return <TunnelGroupPanel profiles={profiles} tunnelStates={tunnelStates} />;
       case "port-tools":
         return <PortUtilities />;
       case "history":
         return <HistoryPanel workspaceId={activeWorkspaceId} />;
       case "environments":
         return <EnvironmentEditor />;
+      case "ssh-keys":
+        return <SSHKeyManager />;
       case "settings":
         return <SettingsPanel />;
     }
@@ -316,10 +339,11 @@ export default function App() {
       );
     }
 
-    return <EmptyState onAdd={showCreateForm} />;
+    return <EmptyState onAdd={showCreateForm} onImportSshConfig={handleImportSshConfig} />;
   };
 
   return (
+    <>
     <div className="flex flex-col h-screen bg-bg">
         <div className="flex flex-1 overflow-hidden">
           <Sidebar
@@ -329,6 +353,7 @@ export default function App() {
             selectedId={selectedId}
             currentView={currentView}
             workspaceId={activeWorkspaceId}
+            recentIds={recentIds}
             onSelect={(id) => {
               select(id);
               setCurrentView("connections");
@@ -342,6 +367,7 @@ export default function App() {
             onSwitchView={handleSwitchView}
             onStopAll={handleStopAll}
             onImportSshConfig={handleImportSshConfig}
+            onTogglePin={handleTogglePin}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -364,5 +390,23 @@ export default function App() {
           tunnelStates={tunnelStates}
         />
       </div>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        profiles={profiles}
+        tunnelStates={tunnelStates}
+        onSelectProfile={(id) => {
+          select(id);
+          setCurrentView("connections");
+        }}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+        onSwitchView={handleSwitchView}
+        onNewConnection={() => {
+          showCreateForm();
+          setCurrentView("connections");
+        }}
+      />
+    </>
   );
 }

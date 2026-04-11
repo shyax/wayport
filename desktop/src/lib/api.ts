@@ -4,6 +4,8 @@ import type {
   ConnectionProfile,
   NewConnectionProfile,
   TunnelState,
+  TunnelStats,
+  TunnelGroup,
   PortInfo,
   PortMonitorUpdate,
   Workspace,
@@ -52,10 +54,16 @@ export async function getTunnelStates(): Promise<Record<string, TunnelState>> {
   return invoke("get_tunnel_states");
 }
 
+// --- Tunnel stats ---
+
+export async function getTunnelStats(): Promise<TunnelStats[]> {
+  return invoke("get_tunnel_stats");
+}
+
 // --- Import/Export ---
 
-export async function exportProfiles(): Promise<string> {
-  return invoke("export_profiles");
+export async function exportProfiles(format?: "json" | "yaml" | "toml"): Promise<string> {
+  return invoke("export_profiles", { format: format ?? null });
 }
 
 export async function importProfiles(): Promise<number> {
@@ -98,6 +106,32 @@ export async function startPortMonitor(port: number): Promise<void> {
 
 export async function stopPortMonitor(port: number): Promise<void> {
   return invoke("stop_port_monitor", { port });
+}
+
+// --- Tunnel Groups ---
+
+export async function listGroups(workspaceId: string): Promise<TunnelGroup[]> {
+  return invoke("list_groups", { workspaceId });
+}
+
+export async function createGroup(group: TunnelGroup): Promise<TunnelGroup> {
+  return invoke("create_group", { group });
+}
+
+export async function updateGroup(group: TunnelGroup): Promise<TunnelGroup> {
+  return invoke("update_group", { group });
+}
+
+export async function deleteGroup(id: string): Promise<void> {
+  return invoke("delete_group", { id });
+}
+
+export async function startGroup(groupId: string, envVars?: Record<string, string>): Promise<void> {
+  return invoke("start_group", { groupId, envVars: envVars ?? null });
+}
+
+export async function stopGroup(groupId: string): Promise<void> {
+  return invoke("stop_group", { groupId });
 }
 
 // --- Workspaces ---
@@ -182,6 +216,27 @@ export async function getTunnelLogs(profileId: string): Promise<string[]> {
   return invoke("get_tunnel_logs", { profileId });
 }
 
+// --- SSH Keys ---
+
+export interface SshKeyInfo {
+  name: string;
+  path: string;
+  key_type: string;
+  has_public: boolean;
+}
+
+export async function listSshKeys(): Promise<SshKeyInfo[]> {
+  return invoke("list_ssh_keys");
+}
+
+export async function getPublicKey(name: string): Promise<string> {
+  return invoke("get_public_key", { name });
+}
+
+export async function generateSshKey(name: string, keyType: string): Promise<string> {
+  return invoke("generate_ssh_key", { name, keyType });
+}
+
 // --- SSH config import ---
 
 export async function importSshConfig(): Promise<ConnectionProfile[]> {
@@ -203,6 +258,12 @@ export async function testConnection(
   return invoke("test_connection", { profile, envVars: envVars ?? null });
 }
 
+// --- Open terminal ---
+
+export async function openTerminal(profileId: string, envVars?: Record<string, string>): Promise<void> {
+  return invoke("open_terminal", { profileId, envVars: envVars ?? null });
+}
+
 // --- Autostart ---
 
 export async function getAutostartEnabled(): Promise<boolean> {
@@ -211,6 +272,22 @@ export async function getAutostartEnabled(): Promise<boolean> {
 
 export async function setAutostartEnabled(enabled: boolean): Promise<void> {
   return invoke("set_autostart_enabled", { enabled });
+}
+
+// --- Pin/Unpin ---
+
+export async function pinProfile(profileId: string): Promise<void> {
+  return invoke("pin_profile", { profileId });
+}
+
+export async function unpinProfile(profileId: string): Promise<void> {
+  return invoke("unpin_profile", { profileId });
+}
+
+// --- Recent profiles ---
+
+export async function getRecentProfiles(workspaceId: string, limit: number = 5): Promise<string[]> {
+  return invoke("get_recent_profiles", { workspaceId, limit });
 }
 
 // --- Event listeners ---

@@ -1,7 +1,7 @@
 use tauri::{State, AppHandle, Emitter, Manager};
 use uuid::Uuid;
 use chrono::Utc;
-use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, TunnelStatus, Workspace, ForwardingType};
+use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelGroup, TunnelState, TunnelStatus, Workspace, ForwardingType};
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
 
@@ -111,6 +111,21 @@ pub fn delete_profile(id: String, store: State<Store>, tunnel_manager: State<Tun
     store
         .save_profiles(profiles)
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn pin_profile(profile_id: String, store: State<Store>) -> Result<(), String> {
+    store.database().set_profile_pinned(&profile_id, true)
+}
+
+#[tauri::command]
+pub fn unpin_profile(profile_id: String, store: State<Store>) -> Result<(), String> {
+    store.database().set_profile_pinned(&profile_id, false)
+}
+
+#[tauri::command]
+pub fn get_recent_profiles(workspace_id: String, limit: usize, store: State<Store>) -> Result<Vec<String>, String> {
+    Ok(store.database().get_recent_profile_ids(&workspace_id, limit))
 }
 
 #[tauri::command]
@@ -266,6 +281,11 @@ pub fn get_tunnel_logs(profile_id: String, tunnel_manager: State<TunnelManager>)
 }
 
 #[tauri::command]
+pub fn get_tunnel_stats(tunnel_manager: State<TunnelManager>) -> Vec<crate::types::TunnelStats> {
+    tunnel_manager.get_stats()
+}
+
+#[tauri::command]
 pub fn check_ssh() -> Result<std::collections::HashMap<String, String>, String> {
     match std::process::Command::new("ssh")
         .arg("-V")
@@ -288,21 +308,34 @@ pub fn check_ssh() -> Result<std::collections::HashMap<String, String>, String> 
 }
 
 #[tauri::command]
-pub async fn export_profiles(store: State<'_, Store>) -> Result<String, String> {
-    let profiles = store.get_profiles();
-    let export_data = serde_json::json!({
-        "version": 1,
-        "exported_at": Utc::now().to_rfc3339(),
-        "profiles": profiles
-    });
+pub async fn export_profiles(store: State<'_, Store>, format: Option<String>) -> Result<String, String> {
+    use wayport_core::config_file::{self, ConfigFormat};
+
+    let desktop_profiles = store.get_profiles();
+
+    // Convert desktop ConnectionProfile to core ConnectionProfile via JSON round-trip.
+    // Both types have identical serde representations, so this is always lossless.
+    let core_profiles: Vec<wayport_core::types::ConnectionProfile> = {
+        let json = serde_json::to_string(&desktop_profiles).map_err(|e| e.to_string())?;
+        serde_json::from_str(&json).map_err(|e| e.to_string())?
+    };
+
+    let cfg_format = match format.as_deref().unwrap_or("json").to_lowercase().as_str() {
+        "yaml" | "yml" => ConfigFormat::Yaml,
+        "toml" => ConfigFormat::Toml,
+        _ => ConfigFormat::Json,
+    };
 
     // Save to Downloads folder with timestamp
     let downloads = dirs::download_dir().ok_or("Could not find Downloads folder")?;
-    let filename = format!("wayport-config-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
+    let filename = format!(
+        "wayport-config-{}.{}",
+        chrono::Local::now().format("%Y%m%d-%H%M%S"),
+        cfg_format.extension()
+    );
     let path = downloads.join(filename);
 
-    std::fs::write(&path, export_data.to_string())
-        .map_err(|e| e.to_string())?;
+    config_file::save_to_file(&core_profiles, &path, cfg_format)?;
 
     Ok(path.to_string_lossy().to_string())
 }
@@ -455,6 +488,112 @@ pub fn set_preference(key: String, value: String, store: State<Store>) -> Result
 }
 
 // ---------------------------------------------------------------------------
+// Tunnel Group commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_groups(workspace_id: String, store: State<Store>) -> Vec<TunnelGroup> {
+    store.database().get_groups(&workspace_id)
+}
+
+#[tauri::command]
+pub fn create_group(group: TunnelGroup, store: State<Store>) -> Result<TunnelGroup, String> {
+    let mut group = group;
+    group.id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    group.created_at = now.clone();
+    group.updated_at = now;
+    store.database().create_group(&group)?;
+    Ok(group)
+}
+
+#[tauri::command]
+pub fn update_group(group: TunnelGroup, store: State<Store>) -> Result<TunnelGroup, String> {
+    let mut group = group;
+    group.updated_at = Utc::now().to_rfc3339();
+    store.database().update_group(&group)?;
+    Ok(group)
+}
+
+#[tauri::command]
+pub fn delete_group(id: String, store: State<Store>) -> Result<(), String> {
+    store.database().delete_group(&id)
+}
+
+#[tauri::command]
+pub fn start_group(
+    group_id: String,
+    env_vars: Option<std::collections::HashMap<String, String>>,
+    store: State<Store>,
+    tunnel_manager: State<TunnelManager>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let groups = store.database().get_groups("local");
+    let group = groups.into_iter()
+        .find(|g| g.id == group_id)
+        .ok_or("Group not found")?;
+
+    let profiles = store.get_profiles();
+
+    for pid in &group.profile_ids {
+        if let Some(profile) = profiles.iter().find(|p| p.id == *pid) {
+            let profile = if let Some(ref vars) = env_vars {
+                apply_env_vars(profile.clone(), vars)
+            } else {
+                profile.clone()
+            };
+
+            let app_clone = app.clone();
+            let profile_name = profile.name.clone();
+            let local_port = profile.local_port;
+            tunnel_manager.start_tunnel(profile, move |state| {
+                let _ = app_clone.emit("tunnel-state-update", &state);
+                update_tray_tooltip(&app_clone);
+
+                match state.status {
+                    TunnelStatus::Connected => {
+                        send_notification(&app_clone, "Tunnel Connected", &format!("{} on port {}", profile_name, local_port));
+                    }
+                    TunnelStatus::Error => {
+                        let msg = state.error.as_deref().unwrap_or("Unknown error");
+                        send_notification(&app_clone, "Tunnel Failed", &format!("{}: {}", profile_name, msg));
+                    }
+                    _ => {}
+                }
+            });
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn stop_group(
+    group_id: String,
+    store: State<Store>,
+    tunnel_manager: State<TunnelManager>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let groups = store.database().get_groups("local");
+    let group = groups.into_iter()
+        .find(|g| g.id == group_id)
+        .ok_or("Group not found")?;
+
+    for pid in &group.profile_ids {
+        tunnel_manager.stop_tunnel(pid);
+        let _ = app.emit("tunnel-state-update", crate::types::TunnelState {
+            profile_id: pid.to_string(),
+            status: crate::types::TunnelStatus::Disconnected,
+            error: None,
+            connected_since: None,
+            reconnect_attempt: 0,
+        });
+    }
+    update_tray_tooltip(&app);
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Autostart (launch at login)
 // ---------------------------------------------------------------------------
 
@@ -475,6 +614,118 @@ pub fn set_autostart_enabled(enabled: bool, app: AppHandle) -> Result<(), String
     } else {
         autolaunch.disable().map_err(|e| e.to_string())
     }
+}
+
+// ---------------------------------------------------------------------------
+// SSH Key Management
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Serialize)]
+pub struct SshKeyInfo {
+    pub name: String,
+    pub path: String,
+    pub key_type: String,
+    pub has_public: bool,
+}
+
+#[tauri::command]
+pub fn list_ssh_keys() -> Vec<SshKeyInfo> {
+    let ssh_dir = match dirs::home_dir() {
+        Some(home) => home.join(".ssh"),
+        None => return vec![],
+    };
+
+    if !ssh_dir.exists() {
+        return vec![];
+    }
+
+    let mut keys = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&ssh_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() { continue; }
+
+            let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+            // Skip public keys, config files, known_hosts, etc.
+            if name.ends_with(".pub") || name == "config" || name == "known_hosts"
+               || name == "known_hosts.old" || name == "authorized_keys" || name.starts_with('.') {
+                continue;
+            }
+
+            // Check if it looks like a private key by reading first line
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if !content.starts_with("-----BEGIN") {
+                    continue;
+                }
+
+                let key_type = if content.contains("RSA") {
+                    "RSA"
+                } else if content.contains("EC") {
+                    "ECDSA"
+                } else if content.contains("OPENSSH") {
+                    "ED25519"
+                } else {
+                    "Unknown"
+                };
+
+                let pub_path = path.with_extension(format!("{}.pub", path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_default()));
+                // Also check for name.pub
+                let pub_exists = pub_path.exists() || ssh_dir.join(format!("{}.pub", name)).exists();
+
+                keys.push(SshKeyInfo {
+                    name,
+                    path: path.to_string_lossy().to_string(),
+                    key_type: key_type.to_string(),
+                    has_public: pub_exists,
+                });
+            }
+        }
+    }
+
+    keys.sort_by(|a, b| a.name.cmp(&b.name));
+    keys
+}
+
+#[tauri::command]
+pub fn get_public_key(name: String) -> Result<String, String> {
+    let ssh_dir = dirs::home_dir().ok_or("Cannot find home directory")?.join(".ssh");
+    let pub_path = ssh_dir.join(format!("{}.pub", name));
+
+    if !pub_path.exists() {
+        return Err(format!("Public key not found: {}.pub", name));
+    }
+
+    std::fs::read_to_string(&pub_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn generate_ssh_key(name: String, key_type: String) -> Result<String, String> {
+    let ssh_dir = dirs::home_dir().ok_or("Cannot find home directory")?.join(".ssh");
+    std::fs::create_dir_all(&ssh_dir).map_err(|e| e.to_string())?;
+
+    let key_path = ssh_dir.join(&name);
+    if key_path.exists() {
+        return Err(format!("Key '{}' already exists", name));
+    }
+
+    let kt = match key_type.as_str() {
+        "rsa" => "rsa",
+        "ecdsa" => "ecdsa",
+        _ => "ed25519",
+    };
+
+    let output = std::process::Command::new("ssh-keygen")
+        .args(["-t", kt, "-f", &key_path.to_string_lossy(), "-N", "", "-q"])
+        .output()
+        .map_err(|e| format!("Failed to run ssh-keygen: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("ssh-keygen failed: {}", stderr));
+    }
+
+    Ok(key_path.to_string_lossy().to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -523,7 +774,12 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             workspace_id: "local".to_string(),
             folder_id: None,
             sort_order: 0,
+            is_pinned: false,
             version: 1,
+            k8s_context: None,
+            k8s_namespace: None,
+            k8s_resource: None,
+            k8s_resource_port: None,
         })
     };
 
@@ -571,6 +827,77 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
     }
 
     Ok(profiles)
+}
+
+// ---------------------------------------------------------------------------
+// Open terminal
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn open_terminal(profile_id: String, env_vars: Option<std::collections::HashMap<String, String>>, store: State<'_, Store>) -> Result<(), String> {
+    let profiles = store.get_profiles();
+    let profile = profiles.into_iter().find(|p| p.id == profile_id).ok_or("Profile not found")?;
+
+    let profile = if let Some(vars) = env_vars {
+        apply_env_vars(profile, &vars)
+    } else {
+        profile
+    };
+
+    let mut ssh_args = Vec::new();
+    if !profile.identity_file.is_empty() {
+        ssh_args.push("-i".to_string());
+        ssh_args.push(profile.identity_file.clone());
+    }
+    if !profile.jump_hosts.is_empty() {
+        let jumps: Vec<String> = profile.jump_hosts.iter()
+            .map(|jh| format!("{}@{}:{}", jh.user, jh.host, jh.port))
+            .collect();
+        ssh_args.push("-J".to_string());
+        ssh_args.push(jumps.join(","));
+    }
+    ssh_args.push("-p".to_string());
+    ssh_args.push(profile.bastion_port.to_string());
+    ssh_args.push(format!("{}@{}", profile.ssh_user, profile.bastion_host));
+
+    let ssh_cmd = format!("ssh {}", ssh_args.join(" "));
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("osascript")
+            .args(["-e", &format!("tell application \"Terminal\" to do script \"{}\"", ssh_cmd)])
+            .args(["-e", "tell application \"Terminal\" to activate"])
+            .spawn()
+            .map_err(|e| format!("Failed to open Terminal: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "cmd", "/k", &ssh_cmd])
+            .spawn()
+            .map_err(|e| format!("Failed to open terminal: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Try common terminal emulators in order of preference
+        let terminals = ["gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
+        let mut launched = false;
+        for term in &terminals {
+            let result = match *term {
+                "gnome-terminal" => std::process::Command::new(term).args(["--", "bash", "-c", &format!("{};exec bash", ssh_cmd)]).spawn(),
+                "konsole" => std::process::Command::new(term).args(["-e", "bash", "-c", &format!("{};exec bash", ssh_cmd)]).spawn(),
+                _ => std::process::Command::new(term).args(["-e", &ssh_cmd]).spawn(),
+            };
+            if result.is_ok() { launched = true; break; }
+        }
+        if !launched {
+            return Err("No supported terminal emulator found".to_string());
+        }
+    }
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

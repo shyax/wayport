@@ -7,3 +7,4 @@ pub mod config;
 pub mod pid;
 pub mod auth;
 pub mod history;
+pub mod config_file;

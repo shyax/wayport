@@ -1,6 +1,6 @@
 // --- Forwarding ---
 
-export type ForwardingType = "local" | "remote" | "dynamic";
+export type ForwardingType = "local" | "remote" | "dynamic" | "kubernetes";
 
 export interface JumpHost {
   host: string;
@@ -34,11 +34,20 @@ export interface Environment {
   workspace_id: string;
   name: string;
   variables: Record<string, string>;
+  color: string | null;
   sort_order: number;
   is_default: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export const ENV_COLORS: Record<string, { hex: string; label: string }> = {
+  local: { hex: "#22c55e", label: "Local" },
+  development: { hex: "#3b82f6", label: "Development" },
+  staging: { hex: "#eab308", label: "Staging" },
+  production: { hex: "#ef4444", label: "Production" },
+  custom: { hex: "#8b5cf6", label: "Custom" },
+};
 
 export interface ConnectionProfile {
   id: string;
@@ -57,7 +66,13 @@ export interface ConnectionProfile {
   jump_hosts: JumpHost[];
   tags: string[];
   sort_order: number;
+  is_pinned: boolean;
   version: number;
+  // Kubernetes port-forward fields
+  k8s_context: string | null;
+  k8s_namespace: string | null;
+  k8s_resource: string | null;
+  k8s_resource_port: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +92,20 @@ export interface HistoryEntry {
   source: ActionSource;
 }
 
+// --- Tunnel Groups ---
+
+export interface TunnelGroup {
+  id: string;
+  workspace_id: string;
+  name: string;
+  profile_ids: string[];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type NewTunnelGroup = Omit<TunnelGroup, "id" | "created_at" | "updated_at">;
+
 // --- Tunnel runtime ---
 
 export type TunnelStatus =
@@ -92,6 +121,16 @@ export interface TunnelState {
   error: string | null;
   connected_since: string | null;
   reconnect_attempt: number;
+}
+
+// --- Tunnel stats ---
+
+export interface TunnelStats {
+  profile_id: string;
+  local_port: number;
+  active_connections: number;
+  total_connections: number;
+  uptime_secs: number;
 }
 
 // --- Port utilities ---
@@ -134,6 +173,11 @@ export const DEFAULT_PROFILE: NewConnectionProfile = {
   jump_hosts: [],
   tags: [],
   sort_order: 0,
+  is_pinned: false,
+  k8s_context: null,
+  k8s_namespace: null,
+  k8s_resource: null,
+  k8s_resource_port: null,
 };
 
 export type NewFolder = Omit<Folder, "id" | "created_at" | "updated_at">;

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Folder, Plus, Trash2, Zap, Check, X, Loader2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import * as api from "../lib/api";
+import type { SshKeyInfo } from "../lib/api";
 import {
   DEFAULT_PROFILE,
   type ConnectionProfile,
@@ -37,6 +38,11 @@ const FORWARDING_LABELS: Record<
     flag: "-D",
     desc: "SOCKS5 proxy through SSH",
   },
+  kubernetes: {
+    label: "K8s",
+    flag: "kubectl",
+    desc: "Port-forward to a Kubernetes pod/service",
+  },
 };
 
 export function ConnectionForm({
@@ -49,6 +55,7 @@ export function ConnectionForm({
     editing ? editing : DEFAULT_PROFILE,
   );
   const [keyPath, setKeyPath] = useState(form.identity_file);
+  const [sshKeys, setSshKeys] = useState<SshKeyInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [portConflict, setPortConflict] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
@@ -57,11 +64,16 @@ export function ConnectionForm({
     message: string;
   } | null>(null);
 
+  useEffect(() => {
+    api.listSshKeys().then(setSshKeys).catch(() => {});
+  }, []);
+
   const isPortValid = (p: number) => p > 0 && p < 65536;
   const localPortValid = isPortValid(form.local_port);
   const bastionPortValid = isPortValid(form.bastion_port);
 
   const isDynamic = form.forwarding_type === "dynamic";
+  const isKubernetes = form.forwarding_type === "kubernetes";
 
   const handleSelectKey = async () => {
     try {
@@ -218,7 +230,102 @@ export function ConnectionForm({
           </p>
         </div>
 
+        {/* Kubernetes section */}
+        {isKubernetes && (
+          <div className="p-4 rounded-xl bg-bg-elevated border border-border space-y-4">
+            <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+              Kubernetes
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Context
+              </label>
+              <input
+                type="text"
+                value={form.k8s_context ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, k8s_context: e.target.value || null })
+                }
+                className={inputClass}
+                placeholder="e.g. my-cluster (blank = current context)"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Namespace
+                </label>
+                <input
+                  type="text"
+                  value={form.k8s_namespace ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, k8s_namespace: e.target.value || null })
+                  }
+                  className={inputClass}
+                  placeholder="default"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Resource
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.k8s_resource ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, k8s_resource: e.target.value || null })
+                  }
+                  className={inputClass}
+                  placeholder="pod/my-pod or svc/my-svc"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Local Port
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={form.local_port}
+                  onChange={(e) => handlePortChange(parseInt(e.target.value))}
+                  className={`${inputClass} ${!localPortValid || portConflict ? "border-status-error focus:border-status-error" : ""}`}
+                />
+                {!localPortValid && (
+                  <p className="text-[11px] text-status-error mt-1">Port must be 1–65535</p>
+                )}
+                {localPortValid && portConflict && (
+                  <p className="text-[11px] text-status-reconnecting mt-1">
+                    {portConflict}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  Resource Port
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={form.k8s_resource_port ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, k8s_resource_port: parseInt(e.target.value) })
+                  }
+                  className={inputClass}
+                  placeholder="e.g. 5432"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* SSH section */}
+        {!isKubernetes && (
         <div className="p-4 rounded-xl bg-bg-elevated border border-border space-y-4">
           <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
             SSH Connection
@@ -282,14 +389,43 @@ export function ConnectionForm({
               <label className="block text-xs font-medium text-text-secondary mb-1.5">
                 SSH Key
               </label>
-              <button
-                type="button"
-                onClick={handleSelectKey}
-                className="focus-ring w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150 flex items-center gap-2 justify-center text-sm"
-              >
-                <Folder size={14} />
-                {keyPath ? "Change Key" : "Select Key"}
-              </button>
+              {sshKeys.length > 0 ? (
+                <div className="flex gap-1.5">
+                  <select
+                    value={keyPath}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setKeyPath(val);
+                      setForm({ ...form, identity_file: val });
+                    }}
+                    className={`${inputClass} flex-1`}
+                  >
+                    <option value="">None</option>
+                    {sshKeys.map((k) => (
+                      <option key={k.name} value={k.path}>
+                        {k.name} ({k.key_type})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleSelectKey}
+                    title="Browse for key file"
+                    className="focus-ring flex-shrink-0 px-2.5 py-2 bg-surface border border-border rounded-lg text-text-muted hover:text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150"
+                  >
+                    <Folder size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSelectKey}
+                  className="focus-ring w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-secondary hover:bg-surface-hover cursor-pointer transition-colors duration-150 flex items-center gap-2 justify-center text-sm"
+                >
+                  <Folder size={14} />
+                  {keyPath ? "Change Key" : "Select Key"}
+                </button>
+              )}
               {keyPath && (
                 <p className="text-[11px] text-text-muted mt-1 truncate font-mono">
                   {keyPath}
@@ -298,8 +434,10 @@ export function ConnectionForm({
             </div>
           </div>
         </div>
+        )}
 
         {/* Port Forwarding section */}
+        {!isKubernetes && (
         <div className="p-4 rounded-xl bg-bg-elevated border border-border space-y-4">
           <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
             Port Mapping
@@ -401,8 +539,10 @@ export function ConnectionForm({
             </div>
           )}
         </div>
+        )}
 
         {/* Jump Hosts */}
+        {!isKubernetes && (
         <div className="p-4 rounded-xl bg-bg-elevated border border-border space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
@@ -488,6 +628,7 @@ export function ConnectionForm({
             </div>
           ))}
         </div>
+        )}
 
         {/* Tags */}
         <div>

@@ -82,17 +82,55 @@ enum Commands {
     /// Import hosts from ~/.ssh/config
     ImportSsh,
 
-    /// Export profiles to JSON file
+    /// Export profiles to a config file (JSON, YAML, or TOML)
     Export {
         /// Output file path
         #[arg(short, long)]
         output: Option<String>,
+
+        /// Output format: json, yaml, toml (default: json)
+        #[arg(short, long, default_value = "json")]
+        format: String,
     },
 
-    /// Import profiles from JSON file
+    /// Import profiles from a config file (JSON, YAML, or TOML — auto-detected by extension)
     Import {
-        /// JSON file path
+        /// Config file path (.json, .yml, .yaml, or .toml)
         file: String,
+    },
+
+    /// Manage tunnel groups (batch connect/disconnect)
+    Group {
+        #[command(subcommand)]
+        action: GroupAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum GroupAction {
+    /// List all tunnel groups
+    Ls,
+    /// Create a new tunnel group
+    Create {
+        /// Group name
+        name: String,
+        /// Profile names to include
+        profiles: Vec<String>,
+    },
+    /// Delete a tunnel group
+    Delete {
+        /// Group name
+        name: String,
+    },
+    /// Connect all tunnels in a group
+    Connect {
+        /// Group name
+        name: String,
+    },
+    /// Disconnect all tunnels in a group
+    Disconnect {
+        /// Group name
+        name: String,
     },
 }
 
@@ -111,8 +149,15 @@ fn main() {
         Commands::History { limit, source } => commands::history::run(workspace, limit, source.as_deref(), json),
         Commands::Logs { name } => commands::logs::run(workspace, &name),
         Commands::ImportSsh => commands::import_ssh::run(),
-        Commands::Export { output } => commands::export::run(workspace, output.as_deref()),
+        Commands::Export { output, format } => commands::export::run(workspace, output.as_deref(), &format),
         Commands::Import { file } => commands::import_cmd::run(workspace, &file),
+        Commands::Group { action } => match action {
+            GroupAction::Ls => commands::group::list(workspace, json),
+            GroupAction::Create { name, profiles } => commands::group::create(workspace, &name, &profiles),
+            GroupAction::Delete { name } => commands::group::delete(workspace, &name),
+            GroupAction::Connect { name } => commands::group::connect(workspace, &name),
+            GroupAction::Disconnect { name } => commands::group::disconnect(workspace, &name),
+        },
     };
 
     if let Err(e) = result {

@@ -1,4 +1,4 @@
-use wayport_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::ActionSource, history};
+use wayport_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::{ActionSource, ForwardingType}, history};
 use crate::output;
 
 fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String {
@@ -39,20 +39,30 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
         return Err(format!("Port {} is already in use", profile.local_port));
     }
 
-    let remote = match (&profile.remote_host, profile.remote_port) {
-        (Some(h), Some(p)) => format!("{}:{}", h, p),
-        _ => "tunnel".to_string(),
+    let is_k8s = profile.forwarding_type == ForwardingType::Kubernetes;
+    let (cmd, args) = if is_k8s {
+        ("kubectl".to_string(), TunnelManager::build_kubectl_args(&profile))
+    } else {
+        ("ssh".to_string(), TunnelManager::build_ssh_args(&profile))
+    };
+
+    let remote = if is_k8s {
+        format!("{}:{}", profile.k8s_resource.as_deref().unwrap_or("pod"), profile.k8s_resource_port.unwrap_or(0))
+    } else {
+        match (&profile.remote_host, profile.remote_port) {
+            (Some(h), Some(p)) => format!("{}:{}", h, p),
+            _ => "tunnel".to_string(),
+        }
     };
 
     if detach {
-        // Detached mode: spawn SSH directly and record PID
-        let args = TunnelManager::build_ssh_args(&profile);
-        let child = std::process::Command::new("ssh")
+        // Detached mode: spawn process directly and record PID
+        let child = std::process::Command::new(&cmd)
             .args(&args)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| format!("Failed to start SSH: {}", e))?;
+            .map_err(|e| format!("Failed to start {}: {}", cmd, e))?;
 
         let child_pid = child.id();
         pid::write_pid(&profile.id, child_pid, ActionSource::Cli)?;
@@ -71,13 +81,12 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
         output::info(&format!("Running in background (PID {})", child_pid));
     } else {
         // Foreground mode: spawn and wait
-        let args = TunnelManager::build_ssh_args(&profile);
-        let mut child = std::process::Command::new("ssh")
+        let mut child = std::process::Command::new(&cmd)
             .args(&args)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to start SSH: {}", e))?;
+            .map_err(|e| format!("Failed to start {}: {}", cmd, e))?;
 
         let child_pid = child.id();
         pid::write_pid(&profile.id, child_pid, ActionSource::Cli)?;

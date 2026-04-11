@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Plus, Zap } from "lucide-react";
 import { useEnvironmentStore } from "../stores/environmentStore";
+import { ENV_COLORS } from "../lib/types";
 
 export function EnvironmentSwitcher() {
   const {
@@ -16,6 +17,12 @@ export function EnvironmentSwitcher() {
   const ref = useRef<HTMLDivElement>(null);
 
   const active = environments.find((e) => e.id === activeEnvironmentId);
+
+  const getEnvColor = (env: { name: string; color: string | null }): string => {
+    if (env.color) return env.color;
+    const key = env.name.toLowerCase();
+    return ENV_COLORS[key]?.hex ?? ENV_COLORS.custom.hex;
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -43,7 +50,14 @@ export function EnvironmentSwitcher() {
         onClick={() => setOpen(!open)}
         className="focus-ring w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs border border-border hover:bg-surface-hover cursor-pointer transition-colors duration-150"
       >
-        <Zap size={11} className="text-accent flex-shrink-0" />
+        {active ? (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: getEnvColor(active) }}
+          />
+        ) : (
+          <Zap size={11} className="text-accent flex-shrink-0" />
+        )}
         <span className="text-text-secondary truncate flex-1 text-left">
           {active?.name ?? "No Environment"}
         </span>
@@ -79,13 +93,17 @@ export function EnvironmentSwitcher() {
                 switchEnvironment(env.id);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-xs cursor-pointer transition-colors duration-150 flex items-center justify-between ${
+              className={`w-full text-left px-3 py-1.5 text-xs cursor-pointer transition-colors duration-150 flex items-center gap-2 ${
                 env.id === activeEnvironmentId
                   ? "text-accent bg-accent/5"
                   : "text-text-secondary hover:bg-surface-hover"
               }`}
             >
-              <span>{env.name}</span>
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: getEnvColor(env) }}
+              />
+              <span className="flex-1 truncate">{env.name}</span>
               <span className="text-[10px] text-text-muted">
                 {Object.keys(env.variables).length} vars
               </span>

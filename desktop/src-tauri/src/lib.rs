@@ -119,11 +119,15 @@ pub fn run() {
       commands::create_profile,
       commands::update_profile,
       commands::delete_profile,
+      commands::pin_profile,
+      commands::unpin_profile,
+      commands::get_recent_profiles,
       commands::start_tunnel,
       commands::stop_tunnel,
       commands::stop_all_tunnels,
       commands::get_tunnel_states,
       commands::get_tunnel_logs,
+      commands::get_tunnel_stats,
       commands::check_ssh,
       commands::export_profiles,
       commands::import_profiles,
@@ -141,6 +145,13 @@ pub fn run() {
       commands::create_folder,
       commands::update_folder,
       commands::delete_folder,
+      // Tunnel Groups
+      commands::list_groups,
+      commands::create_group,
+      commands::update_group,
+      commands::delete_group,
+      commands::start_group,
+      commands::stop_group,
       // Environments
       commands::list_environments,
       commands::create_environment,
@@ -152,6 +163,10 @@ pub fn run() {
       // Preferences
       commands::get_preference,
       commands::set_preference,
+      // SSH key management
+      commands::list_ssh_keys,
+      commands::get_public_key,
+      commands::generate_ssh_key,
       // SSH config import + port utilities
       commands::import_ssh_config,
       commands::find_next_available_port,
@@ -160,6 +175,8 @@ pub fn run() {
       commands::set_autostart_enabled,
       // Connection test
       commands::test_connection,
+      // Open terminal
+      commands::open_terminal,
     ])
     .run(context)
     .expect("error while running tauri application");

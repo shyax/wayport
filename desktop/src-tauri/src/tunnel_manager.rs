@@ -1,4 +1,4 @@
-use crate::types::{ConnectionProfile, ForwardingType, TunnelState, TunnelStatus};
+use crate::types::{ConnectionProfile, ForwardingType, TunnelState, TunnelStats, TunnelStatus};
 use std::collections::HashMap;
 use std::process::{Child, Stdio};
 use parking_lot::RwLock;
@@ -14,6 +14,9 @@ pub struct ManagedTunnel {
     pub state: TunnelState,
     pub reconnect_timer: Option<std::thread::JoinHandle<()>>,
     pub logs: Vec<String>,
+    pub local_port: u16,
+    pub total_connections: u64,
+    pub peak_connections: u32,
 }
 
 pub struct TunnelManager {
@@ -76,6 +79,9 @@ impl TunnelManager {
             state: connecting_state,
             reconnect_timer: None,
             logs: Vec::new(),
+            local_port: profile.local_port,
+            total_connections: 0,
+            peak_connections: 0,
         };
         tunnels.insert(profile_id.clone(), tunnel);
         drop(tunnels);
@@ -115,6 +121,10 @@ impl TunnelManager {
                 args.push("-D".to_string());
                 args.push(profile.local_port.to_string());
             }
+            ForwardingType::Kubernetes => {
+                // Kubernetes port-forward is handled separately, not via SSH.
+                // Return empty args — the caller should use kubectl instead.
+            }
         }
 
         // ProxyJump for multi-hop
@@ -147,16 +157,42 @@ impl TunnelManager {
 
     fn verify_tunnel(forwarding_type: ForwardingType, local_port: u16, child: &mut Child) -> bool {
         match forwarding_type {
-            ForwardingType::Local | ForwardingType::Dynamic => {
+            ForwardingType::Local | ForwardingType::Dynamic | ForwardingType::Kubernetes => {
                 Self::verify_port_reachable(local_port)
             }
             ForwardingType::Remote => {
-                // For remote forwarding, the bind is on the server side.
-                // We can't probe locally — just check the process is still alive after a delay.
+                // For remote forwarding, we can't probe locally —
+                // just check the process is still alive after a delay.
                 thread::sleep(Duration::from_secs(2));
                 matches!(child.try_wait(), Ok(None))
             }
         }
+    }
+
+    fn build_kubectl_args(profile: &ConnectionProfile) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+        args.push("port-forward".to_string());
+
+        if let Some(ref ctx) = profile.k8s_context {
+            if !ctx.is_empty() {
+                args.push("--context".to_string());
+                args.push(ctx.clone());
+            }
+        }
+        if let Some(ref ns) = profile.k8s_namespace {
+            if !ns.is_empty() {
+                args.push("--namespace".to_string());
+                args.push(ns.clone());
+            }
+        }
+
+        let resource = profile.k8s_resource.as_deref().unwrap_or("pod/unknown");
+        args.push(resource.to_string());
+
+        let resource_port = profile.k8s_resource_port.unwrap_or(profile.local_port);
+        args.push(format!("{}:{}", profile.local_port, resource_port));
+
+        args
     }
 
     fn spawn_ssh_process(
@@ -164,9 +200,13 @@ impl TunnelManager {
         tunnels: &Arc<RwLock<HashMap<String, ManagedTunnel>>>,
         on_state_update: impl Fn(TunnelState) + Send + 'static,
     ) {
-        let args = Self::build_ssh_args(profile);
+        let (cmd, args) = if profile.forwarding_type == ForwardingType::Kubernetes {
+            ("kubectl".to_string(), Self::build_kubectl_args(profile))
+        } else {
+            ("ssh".to_string(), Self::build_ssh_args(profile))
+        };
 
-        match std::process::Command::new("ssh")
+        match std::process::Command::new(&cmd)
             .args(&args)
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
@@ -252,7 +292,7 @@ impl TunnelManager {
                 let error_state = TunnelState {
                     profile_id: profile.id.clone(),
                     status: TunnelStatus::Error,
-                    error: Some(format!("Failed to start SSH: {}", e)),
+                    error: Some(format!("Failed to start {}: {}", cmd, e)),
                     connected_since: None,
                     reconnect_attempt: 0,
                 };
@@ -278,6 +318,59 @@ impl TunnelManager {
 
     pub fn has_tunnel(&self, profile_id: &str) -> bool {
         self.tunnels.read().contains_key(profile_id)
+    }
+
+    fn count_port_connections(port: u16) -> u32 {
+        // Use lsof to count ESTABLISHED connections on the port
+        let output = std::process::Command::new("lsof")
+            .args(["-i", &format!("TCP:{}", port), "-s", "TCP:ESTABLISHED", "-P", "-n"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output();
+
+        match output {
+            Ok(out) => {
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                // Subtract 1 for the header line, minimum 0
+                let lines = stdout.lines().count();
+                if lines > 1 { (lines - 1) as u32 } else { 0 }
+            }
+            Err(_) => 0,
+        }
+    }
+
+    pub fn get_stats(&self) -> Vec<TunnelStats> {
+        let mut tunnels = self.tunnels.write();
+        let mut stats = Vec::new();
+
+        for (_, tunnel) in tunnels.iter_mut() {
+            if tunnel.state.status != TunnelStatus::Connected {
+                continue;
+            }
+
+            let active = Self::count_port_connections(tunnel.local_port);
+
+            // Track total connections (new connections since last poll)
+            if active > tunnel.peak_connections {
+                tunnel.total_connections += (active - tunnel.peak_connections) as u64;
+            }
+            tunnel.peak_connections = active;
+
+            let uptime_secs = tunnel.state.connected_since.as_ref()
+                .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                .map(|dt| (Utc::now() - dt.with_timezone(&Utc)).num_seconds().max(0) as u64)
+                .unwrap_or(0);
+
+            stats.push(TunnelStats {
+                profile_id: tunnel.profile_id.clone(),
+                local_port: tunnel.local_port,
+                active_connections: active,
+                total_connections: tunnel.total_connections,
+                uptime_secs,
+            });
+        }
+
+        stats
     }
 
     pub fn stop_tunnel(&self, profile_id: &str) {

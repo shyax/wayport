@@ -43,7 +43,12 @@ pub fn parse_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             workspace_id: "local".to_string(),
             folder_id: None,
             sort_order: 0,
+            is_pinned: false,
             version: 1,
+            k8s_context: None,
+            k8s_namespace: None,
+            k8s_resource: None,
+            k8s_resource_port: None,
         })
     };
 

@@ -1,4 +1,6 @@
 import type { ConnectionProfile, TunnelState } from "../lib/types";
+import { ENV_COLORS } from "../lib/types";
+import { useEnvironmentStore } from "../stores/environmentStore";
 
 interface StatusBarProps {
   activeCount: number;
@@ -12,6 +14,12 @@ export function StatusBar({ activeCount, totalCount, profiles, tunnelStates }: S
     (p) => tunnelStates[p.id]?.status === "connected",
   );
 
+  const { environments, activeEnvironmentId } = useEnvironmentStore();
+  const activeEnv = environments.find((e) => e.id === activeEnvironmentId);
+  const envColor = activeEnv
+    ? activeEnv.color ?? ENV_COLORS[activeEnv.name.toLowerCase()]?.hex ?? ENV_COLORS.custom.hex
+    : null;
+
   return (
     <div className="border-t border-border bg-rail px-4 py-1.5 text-[11px] text-text-muted flex items-center gap-3 min-h-[28px]">
       <span className="flex-shrink-0 flex items-center gap-1.5">
@@ -22,6 +30,21 @@ export function StatusBar({ activeCount, totalCount, profiles, tunnelStates }: S
           {totalCount === 0 ? "No connections" : `${activeCount} / ${totalCount} active`}
         </span>
       </span>
+
+      {activeEnv && (
+        <>
+          <span className="text-border">|</span>
+          <span className="flex-shrink-0 flex items-center gap-1.5">
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: envColor! }}
+            />
+            <span style={{ color: envColor! }} className="font-medium">
+              {activeEnv.name}
+            </span>
+          </span>
+        </>
+      )}
 
       {activeTunnels.length > 0 && (
         <>

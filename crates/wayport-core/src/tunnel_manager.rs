@@ -109,6 +109,9 @@ impl TunnelManager {
                 args.push("-D".to_string());
                 args.push(profile.local_port.to_string());
             }
+            ForwardingType::Kubernetes => {
+                // Kubernetes port-forwarding does not use SSH; args unused.
+            }
         }
 
         if !profile.jump_hosts.is_empty() {
@@ -139,7 +142,7 @@ impl TunnelManager {
 
     fn verify_tunnel(forwarding_type: ForwardingType, local_port: u16, child: &mut Child) -> bool {
         match forwarding_type {
-            ForwardingType::Local | ForwardingType::Dynamic => {
+            ForwardingType::Local | ForwardingType::Dynamic | ForwardingType::Kubernetes => {
                 Self::verify_port_reachable(local_port)
             }
             ForwardingType::Remote => {
@@ -149,14 +152,44 @@ impl TunnelManager {
         }
     }
 
+    pub fn build_kubectl_args(profile: &ConnectionProfile) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+        args.push("port-forward".to_string());
+
+        if let Some(ref ctx) = profile.k8s_context {
+            if !ctx.is_empty() {
+                args.push("--context".to_string());
+                args.push(ctx.clone());
+            }
+        }
+        if let Some(ref ns) = profile.k8s_namespace {
+            if !ns.is_empty() {
+                args.push("--namespace".to_string());
+                args.push(ns.clone());
+            }
+        }
+
+        let resource = profile.k8s_resource.as_deref().unwrap_or("pod/unknown");
+        args.push(resource.to_string());
+
+        let resource_port = profile.k8s_resource_port.unwrap_or(profile.local_port);
+        args.push(format!("{}:{}", profile.local_port, resource_port));
+
+        args
+    }
+
     fn spawn_ssh_process(
         profile: &ConnectionProfile,
         tunnels: &Arc<RwLock<HashMap<String, ManagedTunnel>>>,
         on_state_update: impl Fn(TunnelState) + Send + 'static,
     ) {
-        let args = Self::build_ssh_args(profile);
+        let (cmd, args) = if profile.forwarding_type == ForwardingType::Kubernetes {
+            ("kubectl".to_string(), Self::build_kubectl_args(profile))
+        } else {
+            ("ssh".to_string(), Self::build_ssh_args(profile))
+        };
 
-        match std::process::Command::new("ssh")
+        match std::process::Command::new(&cmd)
             .args(&args)
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
@@ -238,7 +271,7 @@ impl TunnelManager {
                 let error_state = TunnelState {
                     profile_id: profile.id.clone(),
                     status: TunnelStatus::Error,
-                    error: Some(format!("Failed to start SSH: {}", e)),
+                    error: Some(format!("Failed to start {}: {}", cmd, e)),
                     connected_since: None,
                     reconnect_attempt: 0,
                 };

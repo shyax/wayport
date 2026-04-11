@@ -7,6 +7,7 @@ pub enum ForwardingType {
     Local,
     Remote,
     Dynamic,
+    Kubernetes,
 }
 
 impl Default for ForwardingType {
@@ -82,8 +83,19 @@ pub struct ConnectionProfile {
     pub folder_id: Option<String>,
     #[serde(default)]
     pub sort_order: i32,
+    #[serde(default)]
+    pub is_pinned: bool,
     #[serde(default = "default_version")]
     pub version: i32,
+    // Kubernetes port-forward fields
+    #[serde(default)]
+    pub k8s_context: Option<String>,
+    #[serde(default)]
+    pub k8s_namespace: Option<String>,
+    #[serde(default)]
+    pub k8s_resource: Option<String>,
+    #[serde(default)]
+    pub k8s_resource_port: Option<u16>,
 }
 
 impl ConnectionProfile {
@@ -137,6 +149,15 @@ pub struct TunnelState {
     pub error: Option<String>,
     pub connected_since: Option<String>,
     pub reconnect_attempt: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TunnelStats {
+    pub profile_id: String,
+    pub local_port: u16,
+    pub active_connections: u32,
+    pub total_connections: u64,
+    pub uptime_secs: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,6 +226,8 @@ pub struct Environment {
     pub workspace_id: String,
     pub name: String,
     pub variables: HashMap<String, String>,
+    #[serde(default)]
+    pub color: Option<String>,
     pub sort_order: i32,
     pub is_default: bool,
     pub created_at: String,
@@ -224,6 +247,25 @@ pub struct HistoryEntry {
     pub created_at: String,
     #[serde(default = "default_action_source")]
     pub source: ActionSource,
+}
+
+// --- Tunnel Groups ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TunnelGroup {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default = "default_workspace_id")]
+    pub workspace_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub profile_ids: Vec<String>,
+    #[serde(default)]
+    pub sort_order: i32,
+    #[serde(default)]
+    pub created_at: String,
+    #[serde(default)]
+    pub updated_at: String,
 }
 
 #[cfg(test)]
@@ -254,7 +296,12 @@ mod tests {
             workspace_id: "local".to_string(),
             folder_id: None,
             sort_order: 0,
+            is_pinned: false,
             version: 1,
+            k8s_context: None,
+            k8s_namespace: None,
+            k8s_resource: None,
+            k8s_resource_port: None,
         }
     }
 

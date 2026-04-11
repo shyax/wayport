@@ -45,6 +45,7 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
       workspace_id: workspaceId,
       name,
       variables,
+      color: null,
       sort_order: get().environments.length,
       is_default: get().environments.length === 0,
       created_at: now,

@@ -29,6 +29,7 @@ pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String>
             wayport_core::types::ForwardingType::Local => "-L",
             wayport_core::types::ForwardingType::Remote => "-R",
             wayport_core::types::ForwardingType::Dynamic => "-D",
+            wayport_core::types::ForwardingType::Kubernetes => "K8s",
         };
         let remote = match (&p.remote_host, p.remote_port) {
             (Some(h), Some(port)) => format!("{}:{}", h, port),
