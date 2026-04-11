@@ -41,7 +41,7 @@ Or connect the repo to Vercel and set the root directory to `landing/`.
 ## Replace the waitlist mailto
 
 Pro/Team CTAs in `landing/app/components/Pricing.tsx` currently send to:
-`mailto:yesweeyes.dev@gmail.com?subject=Wayport%20Pro%20waitlist`
+`mailto:shyamsundarv.dev@gmail.com?subject=Wayport%20Pro%20waitlist`
 
 Before getting real volume, replace with a proper form:
 - [Tally](https://tally.so) (free, simple)

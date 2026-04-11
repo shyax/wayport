@@ -2,7 +2,7 @@
 name = "app"
 version = "0.1.0"
 description = "Wayport — SSH port-forwarding tunnel manager"
-authors = ["Shyam Sundar <yesweeyes.dev@gmail.com>"]
+authors = ["Shyam Sundar <shyamsundarv.dev@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/shyax/wayport"
 edition = "2021"

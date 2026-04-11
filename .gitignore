@@ -15,5 +15,9 @@ target/
 .terraform/
 .terraform.lock.hcl
 
+# Private
+infra/
+docs/
+
 # Vercel
 .vercel/

@@ -6,7 +6,7 @@ Wayport manages SSH tunnels and stored connection profiles. We take security ser
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email **yesweeyes.dev@gmail.com** with:
+Instead, please email **shyamsundarv.dev@gmail.com** with:
 
 - A description of the vulnerability
 - Steps to reproduce or a proof of concept
