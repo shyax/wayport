@@ -2,22 +2,36 @@
 
 SSH port-forwarding tunnel manager. Tauri v2 + React 19 + Rust backend.
 
-## Skill routing
+## Architecture
 
-When the user's request matches an available skill, ALWAYS invoke it using the Skill
-tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
-The skill has specialized workflows that produce better results than ad-hoc answers.
+- **desktop/** — Tauri v2 app. React frontend in `src/`, Rust backend in `src-tauri/`.
+- **cli/** — Rust CLI (`wayport`). Shares `wayport-core` crate with the desktop app.
+- **crates/wayport-core/** — Shared types, SQLite database, tunnel manager, SSH config parser.
+- **landing/** — Next.js marketing site. Self-contained (own `node_modules`).
+- **infra/** — AWS infrastructure (Terraform) and Lambda sync handlers.
 
-Key routing rules:
-- Product ideas, "is this worth building", brainstorming → invoke office-hours
-- Bugs, errors, "why is this broken", 500 errors → invoke investigate
-- Ship, deploy, push, create PR → invoke ship
-- QA, test the site, find bugs → invoke qa
-- Code review, check my diff → invoke review
-- Update docs after shipping → invoke document-release
-- Weekly retro → invoke retro
-- Design system, brand → invoke design-consultation
-- Visual audit, design polish → invoke design-review
-- Architecture review → invoke plan-eng-review
-- Save progress, checkpoint, resume → invoke checkpoint
-- Code quality, health check → invoke health
+## Key patterns
+
+- Frontend communicates with Rust via Tauri IPC (`invoke()` / `#[tauri::command]`).
+- State management: Zustand stores in `desktop/src/stores/`.
+- Styling: Tailwind CSS v4 with CSS custom properties for theming.
+- Data: SQLite at `~/.config/Wayport/wayport.db`. CLI and desktop share the same DB.
+- Auth: Optional Cognito OAuth. When `VITE_COGNITO_*` env vars are absent, the auth system is invisible.
+
+## Running
+
+```bash
+# Desktop app (dev)
+cd desktop && npm install && npm run tauri dev
+
+# CLI
+cargo build -p wayport-cli --release
+
+# Landing page
+cd landing && npm install && npm run dev
+
+# Checks
+cargo check --workspace
+cargo clippy --workspace -- -D warnings
+cd desktop && npx tsc --noEmit
+```
