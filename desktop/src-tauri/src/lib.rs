@@ -6,20 +6,30 @@ pub mod commands;
 pub mod port_utils;
 
 use tauri::Manager;
+use tauri::Emitter;
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let context = tauri::generate_context!();
 
   tauri::Builder::default()
-    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    .plugin(tauri_plugin_deep_link::init())
+    .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
       // Second launch: focus the existing window instead of opening a new one
       if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
+      }
+      // Forward deep link URLs that arrive as single-instance args (Windows)
+      for arg in &args {
+        if arg.starts_with("wayport://") {
+          let _ = app.emit("deep-link-received", arg.clone());
+        }
       }
     }))
     .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
@@ -43,6 +53,14 @@ pub fn run() {
       app.manage(store);
       app.manage(tunnel_manager);
       app.manage(port_monitor_manager);
+
+      // ── Deep link handler (OAuth callback) ────────────────────────
+      let handle = app.handle().clone();
+      app.deep_link().on_open_url(move |event| {
+        for url in event.urls() {
+          let _ = handle.emit("deep-link-received", url.to_string());
+        }
+      });
 
       // ── System tray ──────────────────────────────────────────────────
       let show_item = MenuItem::with_id(app, "show", "Show Wayport", true, None::<&str>)?;
@@ -177,6 +195,10 @@ pub fn run() {
       commands::test_connection,
       // Open terminal
       commands::open_terminal,
+      // Auth tokens (cloud sync SSO)
+      commands::load_auth_tokens,
+      commands::save_auth_tokens,
+      commands::clear_auth_tokens,
     ])
     .run(context)
     .expect("error while running tauri application");

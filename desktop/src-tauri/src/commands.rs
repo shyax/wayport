@@ -979,3 +979,22 @@ pub async fn test_connection(
         Err(e) => Err(format!("Failed to run SSH: {}", e)),
     }
 }
+
+// ---------------------------------------------------------------------------
+// Auth token persistence (cloud sync SSO)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn load_auth_tokens() -> Option<wayport_core::auth::AuthTokens> {
+    wayport_core::auth::load_tokens()
+}
+
+#[tauri::command]
+pub fn save_auth_tokens(tokens: wayport_core::auth::AuthTokens) -> Result<(), String> {
+    wayport_core::auth::save_tokens(&tokens)
+}
+
+#[tauri::command]
+pub fn clear_auth_tokens() -> Result<(), String> {
+    wayport_core::auth::clear_tokens()
+}

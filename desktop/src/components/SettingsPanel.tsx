@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
+import { Cloud, CloudOff, LogOut, LogIn } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import * as api from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
+import { isCloudEnabled, buildLoginUrl } from "../lib/auth";
 
 function Toggle({
   checked,
@@ -32,6 +36,8 @@ export function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  const { mode, email, signOut } = useAuthStore();
+
   useEffect(() => {
     Promise.all([
       api.getAutostartEnabled().catch(() => false),
@@ -63,8 +69,74 @@ export function SettingsPanel() {
     }
   };
 
+  const handleSignIn = async () => {
+    try {
+      await openUrl(buildLoginUrl());
+    } catch (e) {
+      console.error("Failed to open login URL:", e);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Account / Cloud Sync section */}
+      {isCloudEnabled && (
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            Account
+          </h3>
+          <div className="space-y-1">
+            {mode === "authenticated" ? (
+              <>
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                      <Cloud size={16} className="text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-text-primary font-medium">
+                        {email ?? "Signed in"}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        Cloud sync enabled
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={signOut}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-muted hover:text-status-error hover:bg-status-error/10 rounded-md cursor-pointer transition-colors"
+                  >
+                    <LogOut size={12} />
+                    Sign out
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-hover transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center flex-shrink-0">
+                    <CloudOff size={16} className="text-text-muted" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-text-primary">Offline mode</p>
+                    <p className="text-xs text-text-muted">
+                      Sign in to sync across devices
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignIn}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-accent hover:bg-accent/10 rounded-md cursor-pointer transition-colors"
+                >
+                  <LogIn size={12} />
+                  Sign in
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       <section>
         <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
           General

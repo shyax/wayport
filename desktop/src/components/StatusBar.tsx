@@ -1,6 +1,9 @@
+import { Cloud, CloudOff } from "lucide-react";
 import type { ConnectionProfile, TunnelState } from "../lib/types";
 import { ENV_COLORS } from "../lib/types";
 import { useEnvironmentStore } from "../stores/environmentStore";
+import { useAuthStore } from "../stores/authStore";
+import { isCloudEnabled } from "../lib/auth";
 
 interface StatusBarProps {
   activeCount: number;
@@ -19,6 +22,8 @@ export function StatusBar({ activeCount, totalCount, profiles, tunnelStates }: S
   const envColor = activeEnv
     ? activeEnv.color ?? ENV_COLORS[activeEnv.name.toLowerCase()]?.hex ?? ENV_COLORS.custom.hex
     : null;
+
+  const { mode: authMode, email } = useAuthStore();
 
   return (
     <div className="border-t border-border bg-rail px-4 py-1.5 text-[11px] text-text-muted flex items-center gap-3 min-h-[28px]">
@@ -67,6 +72,29 @@ export function StatusBar({ activeCount, totalCount, profiles, tunnelStates }: S
               </span>
             )}
           </div>
+        </>
+      )}
+
+      {/* Cloud sync indicator */}
+      {isCloudEnabled && (
+        <>
+          <div className="flex-1" />
+          <span
+            className="flex-shrink-0 flex items-center gap-1.5"
+            title={authMode === "authenticated" ? `Synced as ${email ?? "unknown"}` : "Offline — not syncing"}
+          >
+            {authMode === "authenticated" ? (
+              <>
+                <Cloud size={11} className="text-accent" />
+                <span className="text-accent font-medium">Synced</span>
+              </>
+            ) : (
+              <>
+                <CloudOff size={11} />
+                <span>Offline</span>
+              </>
+            )}
+          </span>
         </>
       )}
     </div>

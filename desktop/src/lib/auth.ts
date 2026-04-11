@@ -87,6 +87,18 @@ export async function exchangeCodeForTokens(code: string): Promise<AuthTokens> {
   };
 }
 
+export function extractEmailFromIdToken(idToken: string): string | null {
+  try {
+    const payload = idToken.split(".")[1];
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(b64);
+    const claims = JSON.parse(json);
+    return claims.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function refreshAccessToken(refreshToken: string): Promise<AuthTokens> {
   const resp = await fetch(`https://${cognitoConfig.domain}/oauth2/token`, {
     method: "POST",

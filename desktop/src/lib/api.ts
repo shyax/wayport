@@ -290,6 +290,28 @@ export async function getRecentProfiles(workspaceId: string, limit: number = 5):
   return invoke("get_recent_profiles", { workspaceId, limit });
 }
 
+// --- Auth tokens (Rust persistence) ---
+
+export interface RustAuthTokens {
+  access_token: string | null;
+  id_token: string | null;
+  refresh_token: string | null;
+  email: string | null;
+  expires_at: number | null;
+}
+
+export async function loadAuthTokens(): Promise<RustAuthTokens | null> {
+  return invoke("load_auth_tokens");
+}
+
+export async function saveAuthTokens(tokens: RustAuthTokens): Promise<void> {
+  return invoke("save_auth_tokens", { tokens });
+}
+
+export async function clearAuthTokens(): Promise<void> {
+  return invoke("clear_auth_tokens");
+}
+
 // --- Event listeners ---
 
 export function onTunnelStateUpdate(

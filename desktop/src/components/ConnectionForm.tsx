@@ -64,6 +64,8 @@ export function ConnectionForm({
     message: string;
   } | null>(null);
 
+  const portCheckTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   useEffect(() => {
     api.listSshKeys().then(setSshKeys).catch(() => {});
     return () => clearTimeout(portCheckTimer.current);
@@ -93,7 +95,6 @@ export function ConnectionForm({
     }
   };
 
-  const portCheckTimer = useRef<ReturnType<typeof setTimeout>>();
   const handlePortChange = useCallback((port: number) => {
     setForm((prev) => ({ ...prev, local_port: port }));
     clearTimeout(portCheckTimer.current);
