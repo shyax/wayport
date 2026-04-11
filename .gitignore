@@ -18,6 +18,7 @@ target/
 # Private
 infra/
 docs/
+IMPLEMENTATION_PLAN.md
 
 # Vercel
 .vercel/
