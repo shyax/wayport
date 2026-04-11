@@ -783,3 +783,206 @@ fn action_source_from_str(s: &str) -> ActionSource {
         _ => ActionSource::Gui,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn test_db() -> (Database, TempDir) {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("test.db");
+        let db = Database::new(path);
+        (db, dir)
+    }
+
+    fn sample_profile(name: &str) -> ConnectionProfile {
+        let now = Database::now();
+        ConnectionProfile {
+            id: Uuid::new_v4().to_string(),
+            name: name.to_string(),
+            forwarding_type: ForwardingType::Local,
+            ssh_user: "root".to_string(),
+            bastion_host: "example.com".to_string(),
+            bastion_port: 22,
+            identity_file: String::new(),
+            local_port: 8080,
+            remote_host: Some("localhost".to_string()),
+            remote_port: Some(5432),
+            auto_reconnect: true,
+            jump_hosts: vec![],
+            tags: vec!["test".to_string()],
+            created_at: now.clone(),
+            updated_at: now,
+            workspace_id: "local".to_string(),
+            folder_id: None,
+            sort_order: 0,
+            version: 1,
+        }
+    }
+
+    #[test]
+    fn creates_default_workspace() {
+        let (db, _dir) = test_db();
+        let workspaces = db.get_workspaces();
+        assert_eq!(workspaces.len(), 1);
+        assert_eq!(workspaces[0].id, "local");
+        assert_eq!(workspaces[0].name, "My Workspace");
+    }
+
+    #[test]
+    fn profile_crud() {
+        let (db, _dir) = test_db();
+        let profile = sample_profile("test-tunnel");
+
+        // Create
+        db.create_profile(&profile).unwrap();
+        let fetched = db.get_profile(&profile.id).unwrap();
+        assert_eq!(fetched.name, "test-tunnel");
+        assert_eq!(fetched.bastion_host, "example.com");
+        assert_eq!(fetched.tags, vec!["test".to_string()]);
+
+        // Update
+        let mut updated = fetched;
+        updated.name = "renamed-tunnel".to_string();
+        updated.bastion_port = 2222;
+        db.update_profile(&updated).unwrap();
+        let fetched = db.get_profile(&profile.id).unwrap();
+        assert_eq!(fetched.name, "renamed-tunnel");
+        assert_eq!(fetched.bastion_port, 2222);
+
+        // Delete
+        db.delete_profile(&profile.id).unwrap();
+        assert!(db.get_profile(&profile.id).is_none());
+    }
+
+    #[test]
+    fn get_profiles_returns_all_in_workspace() {
+        let (db, _dir) = test_db();
+        db.create_profile(&sample_profile("tunnel-a")).unwrap();
+        db.create_profile(&sample_profile("tunnel-b")).unwrap();
+
+        let profiles = db.get_profiles("local");
+        assert_eq!(profiles.len(), 2);
+    }
+
+    #[test]
+    fn get_profile_by_name() {
+        let (db, _dir) = test_db();
+        db.create_profile(&sample_profile("my-tunnel")).unwrap();
+
+        let found = db.get_profile_by_name("local", "my-tunnel");
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().name, "my-tunnel");
+
+        let not_found = db.get_profile_by_name("local", "nonexistent");
+        assert!(not_found.is_none());
+    }
+
+    #[test]
+    fn folder_crud() {
+        let (db, _dir) = test_db();
+        let now = Database::now();
+        let folder = Folder {
+            id: Uuid::new_v4().to_string(),
+            workspace_id: "local".to_string(),
+            parent_id: None,
+            name: "Production".to_string(),
+            sort_order: 0,
+            created_at: now.clone(),
+            updated_at: now,
+        };
+
+        db.create_folder(&folder).unwrap();
+        let folders = db.get_folders("local");
+        assert_eq!(folders.len(), 1);
+        assert_eq!(folders[0].name, "Production");
+
+        let mut updated = folder.clone();
+        updated.name = "Staging".to_string();
+        db.update_folder(&updated).unwrap();
+        let folders = db.get_folders("local");
+        assert_eq!(folders[0].name, "Staging");
+
+        db.delete_folder(&folder.id).unwrap();
+        let folders = db.get_folders("local");
+        assert!(folders.is_empty());
+    }
+
+    #[test]
+    fn environment_crud() {
+        let (db, _dir) = test_db();
+        let now = Database::now();
+        let mut variables = std::collections::HashMap::new();
+        variables.insert("HOST".to_string(), "prod.example.com".to_string());
+
+        let env = Environment {
+            id: Uuid::new_v4().to_string(),
+            workspace_id: "local".to_string(),
+            name: "Production".to_string(),
+            variables: variables.clone(),
+            sort_order: 0,
+            is_default: false,
+            created_at: now.clone(),
+            updated_at: now,
+        };
+
+        db.create_environment(&env).unwrap();
+        let envs = db.get_environments("local");
+        assert_eq!(envs.len(), 1);
+        assert_eq!(envs[0].name, "Production");
+        assert_eq!(envs[0].variables.get("HOST").unwrap(), "prod.example.com");
+
+        db.delete_environment(&env.id).unwrap();
+        assert!(db.get_environments("local").is_empty());
+    }
+
+    #[test]
+    fn history_recording_and_retrieval() {
+        let (db, _dir) = test_db();
+        let now = Database::now();
+        let entry = HistoryEntry {
+            id: Uuid::new_v4().to_string(),
+            workspace_id: "local".to_string(),
+            profile_id: Some("prof-1".to_string()),
+            profile_name: "test-tunnel".to_string(),
+            user_display_name: "Local User".to_string(),
+            action: "connected".to_string(),
+            details: Some("Port 8080".to_string()),
+            duration_secs: Some(120),
+            created_at: now,
+            source: ActionSource::Cli,
+        };
+
+        db.record_history(&entry).unwrap();
+        let history = db.get_history("local", 10);
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].profile_name, "test-tunnel");
+        assert_eq!(history[0].source, ActionSource::Cli);
+    }
+
+    #[test]
+    fn preferences_get_set() {
+        let (db, _dir) = test_db();
+
+        assert!(db.get_preference("theme").is_none());
+
+        db.set_preference("theme", "dark").unwrap();
+        assert_eq!(db.get_preference("theme").unwrap(), "dark");
+
+        db.set_preference("theme", "light").unwrap();
+        assert_eq!(db.get_preference("theme").unwrap(), "light");
+    }
+
+    #[test]
+    fn insert_profiles_if_absent_skips_duplicates() {
+        let (db, _dir) = test_db();
+        let profile = sample_profile("unique-tunnel");
+
+        db.insert_profiles_if_absent(&[profile.clone()]);
+        db.insert_profiles_if_absent(&[profile.clone()]);
+
+        let profiles = db.get_profiles("local");
+        assert_eq!(profiles.len(), 1);
+    }
+}

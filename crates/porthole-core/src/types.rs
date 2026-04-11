@@ -225,3 +225,111 @@ pub struct HistoryEntry {
     #[serde(default = "default_action_source")]
     pub source: ActionSource,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_profile() -> ConnectionProfile {
+        ConnectionProfile {
+            id: "test-id".to_string(),
+            name: "test".to_string(),
+            forwarding_type: ForwardingType::Local,
+            ssh_user: "${USER}".to_string(),
+            bastion_host: "${HOST}.example.com".to_string(),
+            bastion_port: 22,
+            identity_file: "/home/${USER}/.ssh/id_rsa".to_string(),
+            local_port: 8080,
+            remote_host: Some("${REMOTE}".to_string()),
+            remote_port: Some(5432),
+            auto_reconnect: true,
+            jump_hosts: vec![JumpHost {
+                host: "${JUMP}".to_string(),
+                port: 22,
+                user: "${USER}".to_string(),
+            }],
+            tags: vec![],
+            created_at: String::new(),
+            updated_at: String::new(),
+            workspace_id: "local".to_string(),
+            folder_id: None,
+            sort_order: 0,
+            version: 1,
+        }
+    }
+
+    #[test]
+    fn env_var_substitution_replaces_all_fields() {
+        let mut vars = HashMap::new();
+        vars.insert("USER".to_string(), "alice".to_string());
+        vars.insert("HOST".to_string(), "prod".to_string());
+        vars.insert("REMOTE".to_string(), "db.internal".to_string());
+        vars.insert("JUMP".to_string(), "bastion.internal".to_string());
+
+        let result = test_profile().with_env_vars(&vars);
+
+        assert_eq!(result.ssh_user, "alice");
+        assert_eq!(result.bastion_host, "prod.example.com");
+        assert_eq!(result.identity_file, "/home/alice/.ssh/id_rsa");
+        assert_eq!(result.remote_host.as_deref(), Some("db.internal"));
+        assert_eq!(result.jump_hosts[0].host, "bastion.internal");
+        assert_eq!(result.jump_hosts[0].user, "alice");
+    }
+
+    #[test]
+    fn env_var_substitution_leaves_unmatched_vars() {
+        let vars = HashMap::new();
+        let result = test_profile().with_env_vars(&vars);
+
+        assert_eq!(result.ssh_user, "${USER}");
+        assert_eq!(result.bastion_host, "${HOST}.example.com");
+    }
+
+    #[test]
+    fn env_var_substitution_does_not_mutate_original() {
+        let profile = test_profile();
+        let mut vars = HashMap::new();
+        vars.insert("USER".to_string(), "bob".to_string());
+
+        let _ = profile.with_env_vars(&vars);
+        assert_eq!(profile.ssh_user, "${USER}");
+    }
+
+    #[test]
+    fn forwarding_type_default_is_local() {
+        assert_eq!(ForwardingType::default(), ForwardingType::Local);
+    }
+
+    #[test]
+    fn forwarding_type_serde_roundtrip() {
+        let json = serde_json::to_string(&ForwardingType::Remote).unwrap();
+        assert_eq!(json, "\"remote\"");
+        let parsed: ForwardingType = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, ForwardingType::Remote);
+    }
+
+    #[test]
+    fn action_source_display() {
+        assert_eq!(ActionSource::Gui.to_string(), "gui");
+        assert_eq!(ActionSource::Cli.to_string(), "cli");
+        assert_eq!(ActionSource::Api.to_string(), "api");
+    }
+
+    #[test]
+    fn connection_profile_serde_defaults() {
+        let json = r#"{
+            "name": "test",
+            "ssh_user": "root",
+            "bastion_host": "example.com",
+            "bastion_port": 22,
+            "local_port": 8080
+        }"#;
+        let profile: ConnectionProfile = serde_json::from_str(json).unwrap();
+        assert_eq!(profile.forwarding_type, ForwardingType::Local);
+        assert!(profile.auto_reconnect);
+        assert_eq!(profile.workspace_id, "local");
+        assert_eq!(profile.version, 1);
+        assert!(profile.jump_hosts.is_empty());
+        assert!(profile.tags.is_empty());
+    }
+}

@@ -140,3 +140,87 @@ pub fn find_next_available_port(start_port: u16) -> Result<u16, String> {
     }
     Err("No available ports found".to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_lsof_listen_entry() {
+        let output = "COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME\n\
+                      sshd    12345 root   3u   IPv4 0x1234 0t0    TCP 127.0.0.1:8080 (LISTEN)";
+        let results = parse_lsof_output(output);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].port, 8080);
+        assert_eq!(results[0].pid, Some(12345));
+        assert_eq!(results[0].process_name.as_deref(), Some("sshd"));
+        assert_eq!(results[0].state, "LISTEN");
+        assert_eq!(results[0].local_addr, "127.0.0.1:8080");
+        assert!(results[0].remote_addr.is_none());
+    }
+
+    #[test]
+    fn parse_lsof_established_with_remote() {
+        let output = "COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME\n\
+                      ssh     99999 user   4u   IPv4 0xabcd 0t0    TCP 127.0.0.1:5432->10.0.0.1:5432 (ESTABLISHED)";
+        let results = parse_lsof_output(output);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].port, 5432);
+        assert_eq!(results[0].state, "ESTABLISHED");
+        assert_eq!(results[0].remote_addr.as_deref(), Some("10.0.0.1:5432"));
+    }
+
+    #[test]
+    fn parse_lsof_empty_output() {
+        let results = parse_lsof_output("");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn parse_lsof_header_only() {
+        let output = "COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME";
+        let results = parse_lsof_output(output);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn parse_lsof_multiple_entries() {
+        let output = "COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME\n\
+                      sshd    111 root   3u   IPv4 0x1 0t0    TCP 127.0.0.1:8080 (LISTEN)\n\
+                      node    222 user   4u   IPv4 0x2 0t0    TCP 127.0.0.1:3000 (LISTEN)";
+        let results = parse_lsof_output(output);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].port, 8080);
+        assert_eq!(results[1].port, 3000);
+    }
+
+    #[test]
+    fn scan_port_range_validates_bounds() {
+        let result = scan_port_range(9000, 8000);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Start port must be"));
+    }
+
+    #[test]
+    fn scan_port_range_rejects_large_range() {
+        let result = scan_port_range(1000, 3000);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("too large"));
+    }
+
+    #[test]
+    fn check_port_available_returns_bool() {
+        // High port is very likely available
+        let result = check_port_available(59123);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn find_next_available_port_finds_one() {
+        let result = find_next_available_port(49152);
+        assert!(result.is_ok());
+        assert!(result.unwrap() >= 49152);
+    }
+}
