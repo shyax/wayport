@@ -2,13 +2,10 @@
   "name": "wayport",
   "private": true,
   "workspaces": [
-    "desktop",
-    "landing"
+    "desktop"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=desktop",
-    "dev:landing": "npm run dev --workspace=landing",
-    "build": "npm run build --workspace=desktop",
-    "build:landing": "npm run build --workspace=landing"
+    "build": "npm run build --workspace=desktop"
   }
 }

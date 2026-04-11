@@ -51,6 +51,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${dmSans.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      style={{ backgroundColor: "#06080f" }}
     >
       <body className="font-sans">
         {children}

@@ -1,7 +1,44 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
+
+type Platform = "mac" | "windows" | "linux" | "unknown";
+
+function detectPlatform(): Platform {
+  if (typeof navigator === "undefined") return "unknown";
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("mac")) return "mac";
+  if (ua.includes("win")) return "windows";
+  if (ua.includes("linux")) return "linux";
+  return "unknown";
+}
+
+const PLATFORM_LABELS: Record<Platform, string> = {
+  mac: "Download for macOS",
+  windows: "Download for Windows",
+  linux: "Download for Linux",
+  unknown: "Download Wayport",
+};
+
+const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
+  mac: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+    </svg>
+  ),
+  windows: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M3 12V6.5l8-1.1V12H3zm0 .5V18l8 1.1V12.5H3zm9-6.8V12h9V3l-9 2.7zm0 7.3V20l9 2.7V12.5h-9z" />
+    </svg>
+  ),
+  linux: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12.5 2c-1.6 0-2.9 1.4-3.2 3.3-.2 1.1.1 2.3.6 3.2C8.5 9.3 7.4 10.5 7 12c-.4 1.6.2 3.3 1.6 4.3-.5 1.1-.5 2.4.2 3.4.6.9 1.6 1.3 2.6 1.3h1.2c1 0 2-.4 2.6-1.3.7-1 .7-2.3.2-3.4 1.4-1 2-2.7 1.6-4.3-.4-1.5-1.5-2.7-2.9-3.5.5-.9.8-2.1.6-3.2C14.4 3.4 13.1 2 12.5 2z" />
+    </svg>
+  ),
+  unknown: null,
+};
 
 function GitHubIcon() {
   return (
@@ -21,6 +58,11 @@ export default function CTA() {
   const shouldReduceMotion = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const [platform, setPlatform] = useState<Platform>("unknown");
+
+  useEffect(() => {
+    setPlatform(detectPlatform());
+  }, []);
 
   return (
     <section
@@ -81,9 +123,10 @@ export default function CTA() {
             href="https://github.com/shyax/wayport/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-accent hover:bg-accent-hover text-white font-semibold text-base transition-colors duration-200 shadow-xl shadow-accent/25"
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-lg bg-accent hover:bg-accent-hover text-white font-semibold text-base transition-colors duration-200 shadow-xl shadow-accent/25"
           >
-            Download Wayport
+            {PLATFORM_ICONS[platform]}
+            {PLATFORM_LABELS[platform]}
           </a>
           <a
             href="https://github.com/shyax/wayport"
@@ -103,7 +146,10 @@ export default function CTA() {
           className="text-sm text-text-muted"
           style={{ fontFamily: "var(--font-mono)" }}
         >
-          macOS &nbsp;·&nbsp; Windows &nbsp;·&nbsp; Linux
+          {platform === "mac" && "Also available for Windows and Linux"}
+          {platform === "windows" && "Also available for macOS and Linux"}
+          {platform === "linux" && "Also available for macOS and Windows"}
+          {platform === "unknown" && "macOS \u00b7 Windows \u00b7 Linux"}
         </motion.p>
       </div>
     </section>
