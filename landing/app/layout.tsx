@@ -23,6 +23,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://wayport.dev"),
   title: "Wayport — SSH tunnels, managed.",
   description:
     "The desktop app for SSH port forwarding. Save tunnels, connect in one click, share configs with your team. macOS, Windows, Linux.",
@@ -36,6 +37,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@0shyax",
+    creator: "@0shyax",
     title: "Wayport — SSH tunnels, managed.",
     description:
       "The desktop app for SSH port forwarding. Save tunnels, connect in one click, share configs with your team.",
