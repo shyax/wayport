@@ -19,6 +19,7 @@ target/
 infra/
 docs/
 IMPLEMENTATION_PLAN.md
+NEXT_STEPS.md
 
 # Vercel
 .vercel/
