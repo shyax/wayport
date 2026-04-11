@@ -1,6 +1,6 @@
-# Contributing to Porthole
+# Contributing to Wayport
 
-Thanks for your interest in contributing to Porthole! We welcome bug reports, feature
+Thanks for your interest in contributing to Wayport! We welcome bug reports, feature
 requests, documentation improvements, and code contributions.
 
 ## Getting Started
@@ -15,13 +15,13 @@ requests, documentation improvements, and code contributions.
 ### Monorepo Layout
 
 ```
-porthole/
+wayport/
   ├── desktop/            # Tauri v2 desktop app (React + Rust)
   │   ├── src/            # React frontend (TypeScript + Tailwind)
   │   └── src-tauri/      # Rust backend
-  ├── cli/                # porthole CLI (Rust)
+  ├── cli/                # wayport CLI (Rust)
   ├── crates/
-  │   └── porthole-core/  # Shared Rust types and logic
+  │   └── wayport-core/  # Shared Rust types and logic
   ├── landing/            # Marketing site (Next.js)
   └── docs/               # Architecture and development docs
 ```
@@ -39,7 +39,7 @@ npm run dev
 **CLI:**
 
 ```bash
-cargo build -p porthole-cli --release
+cargo build -p wayport-cli --release
 ```
 
 **Landing page:**
@@ -59,7 +59,7 @@ Open an issue with:
 - What you expected to happen
 - What actually happened
 - Steps to reproduce
-- Your OS and Porthole version
+- Your OS and Wayport version
 
 ### Suggesting Features
 

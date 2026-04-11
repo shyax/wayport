@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Terms of Service — Porthole",
-  description: "Terms governing your use of Porthole.",
+  title: "Terms of Service — Wayport",
+  description: "Terms governing your use of Wayport.",
 };
 
 export default function TermsPage() {
@@ -19,7 +19,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">1. Acceptance</h2>
           <p>
-            By downloading or using Porthole, you agree to these terms. If you do not
+            By downloading or using Wayport, you agree to these terms. If you do not
             agree, do not use the software.
           </p>
         </section>
@@ -27,17 +27,17 @@ export default function TermsPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">2. License</h2>
           <p>
-            Porthole is proprietary software. We grant you a personal, non-transferable,
-            non-exclusive license to install and use Porthole on your devices for your
+            Wayport is proprietary software. We grant you a personal, non-transferable,
+            non-exclusive license to install and use Wayport on your devices for your
             own internal purposes. You may not redistribute, sublicense, reverse-engineer,
-            or create derivative works from Porthole without written permission.
+            or create derivative works from Wayport without written permission.
           </p>
         </section>
 
         <section>
           <h2 className="text-base font-semibold text-text mb-3">3. Free tier</h2>
           <p>
-            The Free tier of Porthole is provided at no cost and without warranty.
+            The Free tier of Wayport is provided at no cost and without warranty.
             We reserve the right to change, limit, or discontinue the Free tier at any
             time with reasonable notice.
           </p>
@@ -54,7 +54,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="text-base font-semibold text-text mb-3">5. Acceptable use</h2>
-          <p>You may not use Porthole to:</p>
+          <p>You may not use Wayport to:</p>
           <ul className="mt-3 space-y-1.5 list-disc list-inside">
             <li>Access systems you are not authorized to access</li>
             <li>Circumvent security controls or network policies</li>
@@ -65,7 +65,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">6. No warranty</h2>
           <p>
-            Porthole is provided "as is" without warranty of any kind. We make no
+            Wayport is provided "as is" without warranty of any kind. We make no
             guarantees about uptime, data integrity, or fitness for a particular purpose.
             Use it for production-critical infrastructure at your own risk.
           </p>
@@ -75,7 +75,7 @@ export default function TermsPage() {
           <h2 className="text-base font-semibold text-text mb-3">7. Limitation of liability</h2>
           <p>
             To the maximum extent permitted by law, we are not liable for any indirect,
-            incidental, or consequential damages arising from your use of Porthole,
+            incidental, or consequential damages arising from your use of Wayport,
             including data loss or security incidents.
           </p>
         </section>
@@ -83,7 +83,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">8. Changes to terms</h2>
           <p>
-            We may update these terms. Continued use of Porthole after changes are posted
+            We may update these terms. Continued use of Wayport after changes are posted
             constitutes acceptance. We will announce material changes via GitHub release notes.
           </p>
         </section>
@@ -93,10 +93,10 @@ export default function TermsPage() {
           <p>
             Questions?{" "}
             <a
-              href="mailto:legal@porthole.dev"
+              href="mailto:legal@wayport.dev"
               className="text-accent hover:underline"
             >
-              legal@porthole.dev
+              legal@wayport.dev
             </a>
           </p>
         </section>
@@ -107,7 +107,7 @@ export default function TermsPage() {
           href="/"
           className="text-sm text-text-muted hover:text-text transition-colors"
         >
-          ← Back to Porthole
+          ← Back to Wayport
         </a>
       </div>
     </main>

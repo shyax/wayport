@@ -14,8 +14,8 @@ export const cognitoConfig = {
   clientId: COGNITO_CLIENT_ID,
   domain: COGNITO_DOMAIN,
   syncApiUrl: SYNC_API_URL,
-  redirectUri: "porthole://auth/callback",
-  logoutUri: "porthole://auth/logout",
+  redirectUri: "wayport://auth/callback",
+  logoutUri: "wayport://auth/logout",
 };
 
 // --- Token management (stored via Rust backend) ---

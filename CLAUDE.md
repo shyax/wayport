@@ -1,4 +1,4 @@
-# Porthole
+# Wayport
 
 SSH port-forwarding tunnel manager. Tauri v2 + React 19 + Rust backend.
 

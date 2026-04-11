@@ -9,12 +9,12 @@ const navLinks = [
   { label: "Pricing", href: "#pricing" },
   {
     label: "GitHub",
-    href: "https://github.com/shyax/porthole",
+    href: "https://github.com/shyax/wayport",
     external: true,
   },
 ];
 
-function PortholeIcon() {
+function WayportIcon() {
   return (
     <svg
       width="32"
@@ -126,15 +126,15 @@ export default function Navbar() {
             <a
               href="#"
               className="flex items-center gap-2.5 group"
-              aria-label="Porthole home"
+              aria-label="Wayport home"
               onClick={(e) => handleNavClick(e, "#")}
             >
-              <PortholeIcon />
+              <WayportIcon />
               <span
                 className="text-text font-semibold text-lg tracking-tight"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
-                Porthole
+                Wayport
               </span>
             </a>
 

@@ -74,7 +74,7 @@ export function SettingsPanel() {
             <div>
               <p className="text-sm text-text-primary">Launch at login</p>
               <p className="text-xs text-text-muted mt-0.5">
-                Start Porthole automatically when you log in
+                Start Wayport automatically when you log in
               </p>
             </div>
             <Toggle checked={autostart} loading={loading} onToggle={toggleAutostart} />

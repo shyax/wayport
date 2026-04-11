@@ -2,20 +2,20 @@
 
 ## High-Level Overview
 
-Porthole is a desktop application that manages SSH port-forwarding tunnels. The repo is a
+Wayport is a desktop application that manages SSH port-forwarding tunnels. The repo is a
 Cargo workspace with three Rust crates and a Next.js landing page.
 
 ```
-porthole/
+wayport/
   ├── desktop/src-tauri/   Tauri v2 app backend (Rust)
   ├── desktop/src/          React 19 frontend (TypeScript)
-  ├── cli/                  porthole CLI (Rust, Clap v4)
-  └── crates/porthole-core/ Shared types and utilities
+  ├── cli/                  wayport CLI (Rust, Clap v4)
+  └── crates/wayport-core/ Shared types and utilities
 ```
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Porthole                             │
+│                        Wayport                             │
 ├─────────────────────────────────────────────────────────────┤
 │                      React Frontend                         │
 │  desktop/src/App.tsx                                        │
@@ -63,7 +63,7 @@ Generate UUID, timestamp
   ↓
 store.save_profiles([...existing, new])
   ↓
-Persist to SQLite at ~/.config/Porthole/porthole.db
+Persist to SQLite at ~/.config/Wayport/wayport.db
   ↓
 Return profile to frontend
   ↓
@@ -142,7 +142,7 @@ ManagedTunnel {
 
 ### Persistent Storage
 
-SQLite database at `~/.config/Porthole/porthole.db`:
+SQLite database at `~/.config/Wayport/wayport.db`:
 
 - `profiles` table — connection profiles
 - `history` table — connection events with timestamps
@@ -215,20 +215,20 @@ process.kill()  // SIGTERM on Unix; TerminateProcess on Windows
 
 ## CLI (`cli/`)
 
-Built with Clap v4, shares types with `porthole-core`. Commands:
+Built with Clap v4, shares types with `wayport-core`. Commands:
 
 ```
-porthole ls [--tag]
-porthole connect <name> [-d]
-porthole disconnect <name>
-porthole status
-porthole scan <port>
-porthole kill <port>
-porthole add
-porthole rm <name>
-porthole export [--output]
-porthole import <file>
-porthole env list|set|unset
+wayport ls [--tag]
+wayport connect <name> [-d]
+wayport disconnect <name>
+wayport status
+wayport scan <port>
+wayport kill <port>
+wayport add
+wayport rm <name>
+wayport export [--output]
+wayport import <file>
+wayport env list|set|unset
 ```
 
 ## Security Considerations

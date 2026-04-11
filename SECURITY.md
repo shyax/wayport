@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Porthole manages SSH tunnels and stored connection profiles. We take security seriously.
+Wayport manages SSH tunnels and stored connection profiles. We take security seriously.
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 

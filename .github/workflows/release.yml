@@ -76,15 +76,15 @@ jobs:
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Porthole ${{ github.ref_name }}'
+          releaseName: 'Wayport ${{ github.ref_name }}'
           releaseBody: |
-            See [CHANGELOG.md](https://github.com/shyax/porthole/blob/main/CHANGELOG.md) for release notes.
+            See [CHANGELOG.md](https://github.com/shyax/wayport/blob/main/CHANGELOG.md) for release notes.
 
             **Downloads**
-            - macOS (Apple Silicon): `Porthole_*_aarch64.dmg`
-            - macOS (Intel): `Porthole_*_x64.dmg`
-            - Windows: `Porthole_*_x64-setup.exe`
-            - Linux: `porthole_*_amd64.AppImage` / `porthole_*_amd64.deb`
+            - macOS (Apple Silicon): `Wayport_*_aarch64.dmg`
+            - macOS (Intel): `Wayport_*_x64.dmg`
+            - Windows: `Wayport_*_x64-setup.exe`
+            - Linux: `wayport_*_amd64.AppImage` / `wayport_*_amd64.deb`
           releaseDraft: true
           prerelease: false
           projectPath: ./desktop

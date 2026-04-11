@@ -7,23 +7,23 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name used for resource naming"
   type        = string
-  default     = "porthole"
+  default     = "wayport"
 }
 
 variable "cognito_domain_prefix" {
   description = "Cognito hosted UI domain prefix (must be globally unique)"
   type        = string
-  default     = "porthole-auth"
+  default     = "wayport-auth"
 }
 
 variable "callback_urls" {
   description = "OAuth callback URLs for the desktop app"
   type        = list(string)
-  default     = ["porthole://auth/callback"]
+  default     = ["wayport://auth/callback"]
 }
 
 variable "logout_urls" {
   description = "OAuth logout URLs for the desktop app"
   type        = list(string)
-  default     = ["porthole://auth/logout"]
+  default     = ["wayport://auth/logout"]
 }

@@ -1,4 +1,4 @@
-function PortholeIcon() {
+function WayportIcon() {
   return (
     <svg
       width="28"
@@ -34,10 +34,10 @@ const allLinks = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Download", href: "#download" },
-  { label: "Changelog", href: "https://github.com/shyax/porthole/releases", external: true },
-  { label: "Documentation", href: "https://docs.porthole.dev", external: true },
-  { label: "GitHub", href: "https://github.com/shyax/porthole", external: true },
-  { label: "Twitter", href: "https://twitter.com/porthole_app", external: true },
+  { label: "Changelog", href: "https://github.com/shyax/wayport/releases", external: true },
+  { label: "Documentation", href: "https://docs.wayport.dev", external: true },
+  { label: "GitHub", href: "https://github.com/shyax/wayport", external: true },
+  { label: "Twitter", href: "https://twitter.com/wayport_app", external: true },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
 ];
@@ -62,14 +62,14 @@ export default function Footer() {
           <a
             href="/"
             className="inline-flex items-center gap-2.5 text-accent shrink-0"
-            aria-label="Porthole home"
+            aria-label="Wayport home"
           >
-            <PortholeIcon />
+            <WayportIcon />
             <span
               className="text-text font-semibold text-base"
               style={{ fontFamily: "var(--font-sans)" }}
             >
-              Porthole
+              Wayport
             </span>
           </a>
 
@@ -95,7 +95,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-sm text-text-muted">
-            &copy; 2026 Porthole. All rights reserved.
+            &copy; 2026 Wayport. All rights reserved.
           </p>
           <p className="text-sm text-text-muted">
             Built with{" "}

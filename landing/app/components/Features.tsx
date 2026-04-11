@@ -17,13 +17,13 @@ const features: Feature[] = [
     title: "One-Click Connect",
     description:
       "Save your tunnel configs once. Connect with a single click. Never type SSH commands again.",
-    code: "porthole connect",
+    code: "wayport connect",
   },
   {
     icon: <JumpIcon />,
     title: "Always-On Tunnels",
     description:
-      "Tunnels drop? Porthole reconnects automatically. Exponential backoff, TCP verification, zero downtime.",
+      "Tunnels drop? Wayport reconnects automatically. Exponential backoff, TCP verification, zero downtime.",
     code: "● Reconnecting...",
   },
   {
@@ -33,7 +33,7 @@ const features: Feature[] = [
       "See what's running on any port. Kill rogue processes instantly. Full visibility into your local network.",
     tag: "Utility",
     tagColor: "text-teal bg-teal/10 border-teal/20",
-    code: "porthole scan 3000",
+    code: "wayport scan 3000",
   },
   {
     icon: <FolderIcon />,
@@ -85,7 +85,7 @@ export default function Features() {
             transition={{ duration: 0.5, delay: 0.08 }}
             className="text-base sm:text-lg text-text-secondary max-w-2xl mx-auto"
           >
-            From solo developers to engineering teams, Porthole makes port forwarding effortless.
+            From solo developers to engineering teams, Wayport makes port forwarding effortless.
           </motion.p>
         </div>
 

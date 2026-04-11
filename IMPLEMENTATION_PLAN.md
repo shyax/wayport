@@ -1,4 +1,4 @@
-# Porthole Implementation Plan
+# Wayport Implementation Plan
 
 > Generated 2026-04-11. Ordered by impact and dependency chain.
 
@@ -123,13 +123,13 @@
   - "Start Group" / "Stop Group" buttons
   - Group status indicator (all connected / partial / disconnected)
 - **CLI:**
-  - `porthole group ls` — list groups
-  - `porthole group connect <name>` — start all tunnels in group
-  - `porthole group disconnect <name>` — stop all
+  - `wayport group ls` — list groups
+  - `wayport group connect <name>` — start all tunnels in group
+  - `wayport group disconnect <name>` — stop all
 
 **Files to create/modify:**
-- `crates/porthole-core/src/types.rs` (modify)
-- `crates/porthole-core/src/database.rs` (modify)
+- `crates/wayport-core/src/types.rs` (modify)
+- `crates/wayport-core/src/database.rs` (modify)
 - `desktop/src-tauri/src/commands.rs` (modify)
 - `desktop/src-tauri/src/lib.rs` (modify)
 - `desktop/src/components/TunnelGroupPanel.tsx` (create)
@@ -145,21 +145,21 @@
 **Changes:**
 - **Core:**
   - `Cargo.toml` — add `serde_yaml` and `toml` dependencies
-  - New module `crates/porthole-core/src/config_file.rs`:
+  - New module `crates/wayport-core/src/config_file.rs`:
     - `load_from_file(path) -> Vec<ConnectionProfile>` (detect format by extension)
     - `save_to_file(profiles, path, format)` (YAML or TOML)
-    - Support `.porthole.yml` / `.porthole.toml` as convention
+    - Support `.wayport.yml` / `.wayport.toml` as convention
 - **CLI:**
-  - `porthole export --format yaml|toml|json --output path`
-  - `porthole import path.yml`
-  - `porthole sync path.yml` — reconcile file with database (additive merge)
+  - `wayport export --format yaml|toml|json --output path`
+  - `wayport import path.yml`
+  - `wayport sync path.yml` — reconcile file with database (additive merge)
 - **Desktop:**
   - Export dialog: format dropdown (JSON, YAML, TOML)
 
 **Files to create/modify:**
-- `crates/porthole-core/Cargo.toml` (modify)
-- `crates/porthole-core/src/config_file.rs` (create)
-- `crates/porthole-core/src/lib.rs` (modify)
+- `crates/wayport-core/Cargo.toml` (modify)
+- `crates/wayport-core/src/config_file.rs` (create)
+- `crates/wayport-core/src/lib.rs` (modify)
 - `cli/src/commands/export.rs` (modify)
 - `cli/src/commands/import.rs` (modify)
 - `desktop/src-tauri/src/commands.rs` (modify)
@@ -229,7 +229,7 @@
 ---
 
 ### 2.6 kubectl Port-Forward Integration
-**Why:** A huge portion of modern tunnel usage is Kubernetes. Supporting it makes Porthole relevant to k8s-native teams.
+**Why:** A huge portion of modern tunnel usage is Kubernetes. Supporting it makes Wayport relevant to k8s-native teams.
 
 **Changes:**
 - **Core types:**
@@ -242,14 +242,14 @@
     - Spawn `kubectl port-forward --context ctx -n ns svc/name local:remote` instead of SSH
     - Same lifecycle management (auto-reconnect, status, logs)
 - **CLI:**
-  - `porthole connect <name>` works the same — the profile type determines the command
+  - `wayport connect <name>` works the same — the profile type determines the command
 - **Frontend:**
   - Profile form: when type=Kubernetes, show k8s-specific fields (context, namespace, resource)
   - Auto-detect available contexts via `kubectl config get-contexts`
 
 **Files to create/modify:**
-- `crates/porthole-core/src/types.rs` (modify)
-- `crates/porthole-core/src/database.rs` (modify — migration)
+- `crates/wayport-core/src/types.rs` (modify)
+- `crates/wayport-core/src/database.rs` (modify — migration)
 - `desktop/src-tauri/src/tunnel_manager.rs` (modify)
 - `desktop/src-tauri/src/commands.rs` (modify — add `list_k8s_contexts`)
 - `desktop/src/components/ConnectionForm.tsx` (modify)
@@ -305,15 +305,15 @@
 ---
 
 ### 3.3 Homebrew Distribution
-**Why:** `brew install --cask porthole` is the expected install path for macOS developers.
+**Why:** `brew install --cask wayport` is the expected install path for macOS developers.
 
 **Changes:**
-- Create a Homebrew tap repository (`homebrew-porthole`)
+- Create a Homebrew tap repository (`homebrew-wayport`)
 - Write cask formula pointing to GitHub Releases `.dmg`
 - CI: auto-update cask SHA on new release
 
 **Files to create (separate repo):**
-- `homebrew-porthole/Casks/porthole.rb`
+- `homebrew-wayport/Casks/wayport.rb`
 
 ---
 

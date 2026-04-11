@@ -14,7 +14,7 @@ const steps: Step[] = [
     number: "01",
     title: "Save your tunnel",
     description:
-      "Enter your connection details once. Host, ports, jump servers — Porthole remembers it all.",
+      "Enter your connection details once. Host, ports, jump servers — Wayport remembers it all.",
     code: `Staging DB → localhost:5433`,
   },
   {

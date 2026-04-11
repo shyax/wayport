@@ -21,7 +21,7 @@ body:
       label: Steps to reproduce
       description: Minimal steps to trigger the bug.
       placeholder: |
-        1. Open Porthole
+        1. Open Wayport
         2. Create a profile with ...
         3. Click connect
         4. See error
@@ -40,7 +40,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Porthole version
+      label: Wayport version
       placeholder: "0.1.0"
     validations:
       required: true

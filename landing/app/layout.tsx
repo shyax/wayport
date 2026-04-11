@@ -23,20 +23,20 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Porthole — SSH tunnels, managed.",
+  title: "Wayport — SSH tunnels, managed.",
   description:
     "The desktop app for SSH port forwarding. Save tunnels, connect in one click, share configs with your team. macOS, Windows, Linux.",
   openGraph: {
-    title: "Porthole — SSH tunnels, managed.",
+    title: "Wayport — SSH tunnels, managed.",
     description:
       "The desktop app for SSH port forwarding. Save tunnels, connect in one click, share configs with your team.",
     type: "website",
-    url: "https://porthole.dev",
-    siteName: "Porthole",
+    url: "https://wayport.dev",
+    siteName: "Wayport",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Porthole — SSH tunnels, managed.",
+    title: "Wayport — SSH tunnels, managed.",
     description:
       "The desktop app for SSH port forwarding. Save tunnels, connect in one click, share configs with your team.",
   },
@@ -60,7 +60,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Porthole",
+              name: "Wayport",
               applicationCategory: "DeveloperApplication",
               operatingSystem: "macOS, Windows, Linux",
               offers: {

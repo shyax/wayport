@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "porthole",
+    name = "wayport",
     about = "SSH tunnel manager — save, connect, and monitor port forwarding tunnels",
     version
 )]

@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Privacy Policy — Porthole",
-  description: "How Porthole handles your data.",
+  title: "Privacy Policy — Wayport",
+  description: "How Wayport handles your data.",
 };
 
 export default function PrivacyPage() {
@@ -14,15 +14,15 @@ export default function PrivacyPage() {
       </h1>
       <p className="text-sm text-text-muted mb-12">Last updated: April 2026</p>
 
-      <div className="prose-porthole space-y-10 text-text-secondary text-sm leading-relaxed">
+      <div className="prose-wayport space-y-10 text-text-secondary text-sm leading-relaxed">
 
         <section>
-          <h2 className="text-base font-semibold text-text mb-3">What Porthole does with your data</h2>
+          <h2 className="text-base font-semibold text-text mb-3">What Wayport does with your data</h2>
           <p>
-            Porthole is a local-first desktop application. Your connection profiles, SSH keys,
+            Wayport is a local-first desktop application. Your connection profiles, SSH keys,
             and tunnel configurations are stored exclusively on your device at{" "}
             <code className="text-accent" style={{ fontFamily: "var(--font-mono)" }}>
-              ~/.config/Porthole/
+              ~/.config/Wayport/
             </code>. They are never uploaded to any server.
           </p>
         </section>
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">Data we collect</h2>
           <p>
-            Porthole collects no data whatsoever. The app makes no
+            Wayport collects no data whatsoever. The app makes no
             network requests except to the SSH hosts you explicitly configure.
           </p>
         </section>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">Third-party services</h2>
           <p>
-            Porthole uses the following third-party services, each with their own privacy policy:
+            Wayport uses the following third-party services, each with their own privacy policy:
           </p>
           <ul className="mt-3 space-y-1.5 list-disc list-inside">
             <li>
@@ -72,14 +72,14 @@ export default function PrivacyPage() {
           <p>
             You can delete all locally stored data by removing{" "}
             <code className="text-accent" style={{ fontFamily: "var(--font-mono)" }}>
-              ~/.config/Porthole/
+              ~/.config/Wayport/
             </code>{" "}
             at any time. For questions, email us at{" "}
             <a
-              href="mailto:privacy@porthole.dev"
+              href="mailto:privacy@wayport.dev"
               className="text-accent hover:underline"
             >
-              privacy@porthole.dev
+              privacy@wayport.dev
             </a>
             .
           </p>
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
           <h2 className="text-base font-semibold text-text mb-3">Changes</h2>
           <p>
             We may update this policy as the product evolves. Material changes will be
-            announced via a GitHub release note. Continued use of Porthole after changes
+            announced via a GitHub release note. Continued use of Wayport after changes
             constitutes acceptance of the updated policy.
           </p>
         </section>
@@ -99,10 +99,10 @@ export default function PrivacyPage() {
           <p>
             Questions?{" "}
             <a
-              href="mailto:privacy@porthole.dev"
+              href="mailto:privacy@wayport.dev"
               className="text-accent hover:underline"
             >
-              privacy@porthole.dev
+              privacy@wayport.dev
             </a>
           </p>
         </section>
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
           href="/"
           className="text-sm text-text-muted hover:text-text transition-colors"
         >
-          ← Back to Porthole
+          ← Back to Wayport
         </a>
       </div>
     </main>

@@ -142,7 +142,7 @@ export default function Pricing() {
               {/* CTA */}
               {tier.comingSoon ? (
                 <a
-                  href="mailto:yesweeyes.dev@gmail.com?subject=Porthole%20Pro%20waitlist"
+                  href="mailto:yesweeyes.dev@gmail.com?subject=Wayport%20Pro%20waitlist"
                   className="mt-2 flex items-center justify-center py-3 px-5 rounded-lg font-semibold text-sm transition-colors duration-200 border border-border hover:border-text-muted text-text-secondary hover:text-text"
                 >
                   {tier.cta}

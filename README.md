@@ -1,4 +1,4 @@
-# Porthole
+# Wayport
 
 A lightweight, cross-platform desktop app for managing SSH port-forwarding tunnels.
 Save connection profiles, connect with one click, and keep your tunnels alive automatically.
@@ -12,35 +12,35 @@ Save connection profiles, connect with one click, and keep your tunnels alive au
 - **SSH config import** — Import hosts directly from `~/.ssh/config`
 - **Port utilities** — Scan, kill, and monitor ports; detect conflicts before connecting
 - **Environment variables** — Substitute `${VAR}` in connection fields for staging/prod switching
-- **CLI** — Manage tunnels from the terminal with `porthole` commands
+- **CLI** — Manage tunnels from the terminal with `wayport` commands
 - **Cross-platform** — macOS, Windows, and Linux via Tauri v2
 - **Tiny binary** — ~5-10 MB download (vs. Electron's 150 MB)
 
 ## Download
 
 Get the latest release for your platform from the
-[GitHub Releases](https://github.com/shyax/porthole/releases) page.
+[GitHub Releases](https://github.com/shyax/wayport/releases) page.
 
 | Platform | File |
 |----------|------|
-| macOS (Apple Silicon) | `Porthole_*_aarch64.dmg` |
-| macOS (Intel) | `Porthole_*_x64.dmg` |
-| Windows | `Porthole_*_x64-setup.exe` |
-| Linux | `porthole_*_amd64.AppImage` |
+| macOS (Apple Silicon) | `Wayport_*_aarch64.dmg` |
+| macOS (Intel) | `Wayport_*_x64.dmg` |
+| Windows | `Wayport_*_x64-setup.exe` |
+| Linux | `wayport_*_amd64.AppImage` |
 
 ## Tech Stack
 
 - **Frontend:** React 19 + TypeScript + Tailwind CSS v4
 - **Backend:** Rust + Tauri v2
 - **CLI:** Rust (Clap v4)
-- **Shared core:** `porthole-core` crate
+- **Shared core:** `wayport-core` crate
 - **Process management:** System `ssh` binary (honors `~/.ssh/config`, SSH agent, all key formats)
-- **Data persistence:** SQLite via `rusqlite` at `~/.config/Porthole/`
+- **Data persistence:** SQLite via `rusqlite` at `~/.config/Wayport/`
 
 ## Monorepo Layout
 
 ```
-porthole/
+wayport/
   ├── desktop/                # Tauri v2 desktop app
   │   ├── src/                # React frontend
   │   │   ├── components/     # UI components
@@ -54,10 +54,10 @@ porthole/
   │       │   ├── database.rs
   │       │   └── port_utils.rs
   │       └── tauri.conf.json
-  ├── cli/                    # porthole CLI
+  ├── cli/                    # wayport CLI
   │   └── src/
   ├── crates/
-  │   └── porthole-core/      # Shared types and logic
+  │   └── wayport-core/      # Shared types and logic
   ├── landing/                # Marketing site (Next.js)
   └── docs/                   # Architecture and development docs
 ```
@@ -82,8 +82,8 @@ npm run build      # production build + bundle
 ### CLI
 
 ```bash
-cargo build -p porthole-cli --release
-./target/release/porthole --help
+cargo build -p wayport-cli --release
+./target/release/wayport --help
 ```
 
 ### Landing page
@@ -134,7 +134,7 @@ ssh -i <key> -L <local>:<remote_host>:<remote_port> -N \
   <user>@<bastion>
 ```
 
-After spawn, Porthole TCP-probes `localhost:<local_port>` every 500ms (10s timeout)
+After spawn, Wayport TCP-probes `localhost:<local_port>` every 500ms (10s timeout)
 to confirm the tunnel is working before marking it "Connected".
 
 ## Cutting a Release

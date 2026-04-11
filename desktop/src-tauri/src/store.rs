@@ -10,7 +10,7 @@ pub struct Store {
 impl Store {
     pub fn new(config_dir: PathBuf) -> Self {
         std::fs::create_dir_all(&config_dir).ok();
-        let db_path = config_dir.join("porthole.db");
+        let db_path = config_dir.join("wayport.db");
         let db = Database::new(db_path);
         let store = Self { db, config_dir: config_dir.clone() };
         store.migrate_from_json();

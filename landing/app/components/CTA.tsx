@@ -78,15 +78,15 @@ export default function CTA() {
           className="flex flex-col sm:flex-row items-center gap-3"
         >
           <a
-            href="https://github.com/shyax/porthole/releases"
+            href="https://github.com/shyax/wayport/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-accent hover:bg-accent-hover text-white font-semibold text-base transition-colors duration-200 shadow-xl shadow-accent/25"
           >
-            Download Porthole
+            Download Wayport
           </a>
           <a
-            href="https://github.com/shyax/porthole"
+            href="https://github.com/shyax/wayport"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-lg border border-border hover:border-text-muted text-text-secondary hover:text-text font-semibold text-base transition-colors duration-200"

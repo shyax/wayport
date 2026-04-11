@@ -1,4 +1,4 @@
-# Porthole Sync Infrastructure
+# Wayport Sync Infrastructure
 
 AWS infrastructure for optional cloud sync. The desktop app works fully offline without this.
 
@@ -47,9 +47,9 @@ npx esbuild lambda/sync-pull.ts --bundle --platform=node --target=node20 --outfi
 npx esbuild lambda/sync-delete.ts --bundle --platform=node --target=node20 --outfile=.build/sync-delete/index.js
 
 # Then update each Lambda
-aws lambda update-function-code --function-name porthole-sync-push --zip-file fileb://.build/sync-push.zip
-aws lambda update-function-code --function-name porthole-sync-pull --zip-file fileb://.build/sync-pull.zip
-aws lambda update-function-code --function-name porthole-sync-delete --zip-file fileb://.build/sync-delete.zip
+aws lambda update-function-code --function-name wayport-sync-push --zip-file fileb://.build/sync-push.zip
+aws lambda update-function-code --function-name wayport-sync-pull --zip-file fileb://.build/sync-pull.zip
+aws lambda update-function-code --function-name wayport-sync-delete --zip-file fileb://.build/sync-delete.zip
 ```
 
 ## Estimated cost

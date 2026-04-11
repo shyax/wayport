@@ -280,7 +280,7 @@ resource "aws_lambda_function" "sync_delete" {
 
 resource "aws_api_gateway_rest_api" "sync" {
   name        = "${var.project_name}-sync-api"
-  description = "Porthole profile sync API"
+  description = "Wayport profile sync API"
 }
 
 # Cognito authorizer

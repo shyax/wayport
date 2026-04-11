@@ -9,16 +9,16 @@
 ## Monorepo structure
 
 ```
-porthole/
-  Cargo.toml           Cargo workspace (desktop/src-tauri, cli, crates/porthole-core)
+wayport/
+  Cargo.toml           Cargo workspace (desktop/src-tauri, cli, crates/wayport-core)
   desktop/             Tauri v2 desktop app
     src/               React 19 frontend
     src-tauri/         Rust backend
     package.json
     vite.config.ts
-  cli/                 porthole CLI (Rust)
+  cli/                 wayport CLI (Rust)
   crates/
-    porthole-core/     Shared Rust types
+    wayport-core/     Shared Rust types
   landing/             Next.js marketing site
   docs/                Architecture + development docs
 ```
@@ -48,14 +48,14 @@ Output locations:
 ## Running the CLI
 
 ```bash
-cargo build -p porthole-cli --release
-./target/release/porthole --help
+cargo build -p wayport-cli --release
+./target/release/wayport --help
 ```
 
 Or during development:
 ```bash
-cargo run -p porthole-cli -- ls
-cargo run -p porthole-cli -- status
+cargo run -p wayport-cli -- ls
+cargo run -p wayport-cli -- status
 ```
 
 ## Running the landing page
@@ -167,7 +167,7 @@ const result = await myNewCommand("value");
    ```bash
    ssh -i ~/.ssh/key -L 5433:target:5432 -N -v user@bastion
    ```
-3. Check if the local port is already in use: `porthole scan 5433`
+3. Check if the local port is already in use: `wayport scan 5433`
 
 ### Frontend not updating
 

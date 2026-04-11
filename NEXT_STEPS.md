@@ -41,7 +41,7 @@ Or connect the repo to Vercel and set the root directory to `landing/`.
 ## Replace the waitlist mailto
 
 Pro/Team CTAs in `landing/app/components/Pricing.tsx` currently send to:
-`mailto:yesweeyes.dev@gmail.com?subject=Porthole%20Pro%20waitlist`
+`mailto:yesweeyes.dev@gmail.com?subject=Wayport%20Pro%20waitlist`
 
 Before getting real volume, replace with a proper form:
 - [Tally](https://tally.so) (free, simple)
@@ -63,9 +63,9 @@ Add before v0.2.0:
 
 The CLI builds fine but there's no way for users to install it. Options:
 
-- **GitHub Releases** — attach the `porthole` binary to each release (add to the workflow)
+- **GitHub Releases** — attach the `wayport` binary to each release (add to the workflow)
 - **Homebrew** — write a formula and submit to homebrew-core, or host a tap
-- **cargo install** — publish `porthole-cli` to crates.io (requires making the source available)
+- **cargo install** — publish `wayport-cli` to crates.io (requires making the source available)
 
 ## Paid tier backend
 

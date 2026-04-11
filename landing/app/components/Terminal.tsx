@@ -77,7 +77,7 @@ export default function Terminal() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText("brew install --cask porthole");
+      await navigator.clipboard.writeText("brew install --cask wayport");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -127,7 +127,7 @@ export default function Terminal() {
             className="absolute left-1/2 -translate-x-1/2 text-text-muted text-sm"
             style={{ fontFamily: "var(--font-mono)" }}
           >
-            Porthole
+            Wayport
           </span>
 
           {/* Copy button */}
@@ -145,7 +145,7 @@ export default function Terminal() {
             ) : (
               <>
                 <CopyIcon />
-                brew install --cask porthole
+                brew install --cask wayport
               </>
             )}
           </button>
@@ -165,7 +165,7 @@ export default function Terminal() {
             </TerminalLine>
             <TerminalLine>
               <span className="text-accent">❯ </span>
-              <span className="text-text">porthole connect </span>
+              <span className="text-text">wayport connect </span>
               <span className="text-blue">&quot;Staging DB&quot;</span>
             </TerminalLine>
             <TerminalLine>
@@ -179,7 +179,7 @@ export default function Terminal() {
             {/* Block 2 — connect prod redis */}
             <TerminalLine className="mt-3">
               <span className="text-accent">❯ </span>
-              <span className="text-text">porthole connect </span>
+              <span className="text-text">wayport connect </span>
               <span className="text-blue">&quot;Prod Redis&quot;</span>
             </TerminalLine>
             <TerminalLine>
@@ -193,7 +193,7 @@ export default function Terminal() {
             {/* Block 3 — status */}
             <TerminalLine className="mt-3">
               <span className="text-accent">❯ </span>
-              <span className="text-text">porthole status</span>
+              <span className="text-text">wayport status</span>
             </TerminalLine>
             <TerminalLine className="mt-1 text-text-muted grid grid-cols-[14rem_10rem_1fr] gap-0">
               <span>TUNNEL</span>
