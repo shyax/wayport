@@ -37,7 +37,7 @@ const allLinks = [
   { label: "Changelog", href: "https://github.com/shyax/wayport/releases", external: true },
   { label: "Documentation", href: "https://docs.wayport.dev", external: true },
   { label: "GitHub", href: "https://github.com/shyax/wayport", external: true },
-  { label: "Twitter", href: "https://twitter.com/wayport_app", external: true },
+  { label: "X", href: "https://x.com/0shyax", external: true },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
 ];

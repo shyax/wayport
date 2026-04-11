@@ -8,7 +8,8 @@
 <p align="center">
   <a href="https://wayport.dev">Website</a> &middot;
   <a href="https://github.com/shyax/wayport/releases">Download</a> &middot;
-  <a href="https://github.com/shyax/wayport/blob/main/CONTRIBUTING.md">Contributing</a>
+  <a href="https://github.com/shyax/wayport/blob/main/CONTRIBUTING.md">Contributing</a> &middot;
+  <a href="https://x.com/0shyax">X</a>
 </p>
 
 <p align="center">
