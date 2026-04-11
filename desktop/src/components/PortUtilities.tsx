@@ -585,10 +585,10 @@ function PortTable({ entries, compact }: { entries: PortInfo[]; compact?: boolea
             <th className="px-3 py-2 font-medium">PID</th>
             <th className="px-3 py-2 font-medium">Process</th>
             <th className="px-3 py-2 font-medium">Port</th>
-            <th className="px-3 py-2 font-medium">Proto</th>
+            <th className="px-3 py-2 font-medium hidden sm:table-cell">Proto</th>
             <th className="px-3 py-2 font-medium">State</th>
-            <th className="px-3 py-2 font-medium">Local Address</th>
-            <th className="px-3 py-2 font-medium">Remote Address</th>
+            <th className="px-3 py-2 font-medium hidden md:table-cell">Local Address</th>
+            <th className="px-3 py-2 font-medium hidden lg:table-cell">Remote Address</th>
           </tr>
         </thead>
         <tbody className="font-mono text-xs">
@@ -600,11 +600,11 @@ function PortTable({ entries, compact }: { entries: PortInfo[]; compact?: boolea
               <td className="px-3 py-1.5 text-text-secondary">
                 {entry.pid ?? "-"}
               </td>
-              <td className="px-3 py-1.5 text-accent">
+              <td className="px-3 py-1.5 text-accent truncate max-w-[120px]" title={entry.process_name ?? undefined}>
                 {entry.process_name ?? "-"}
               </td>
               <td className="px-3 py-1.5 text-text-secondary">{entry.port}</td>
-              <td className="px-3 py-1.5 text-text-muted">
+              <td className="px-3 py-1.5 text-text-muted hidden sm:table-cell">
                 {entry.protocol ?? "-"}
               </td>
               <td className="px-3 py-1.5">
@@ -620,10 +620,10 @@ function PortTable({ entries, compact }: { entries: PortInfo[]; compact?: boolea
                   {entry.state}
                 </span>
               </td>
-              <td className="px-3 py-1.5 text-text-secondary">
+              <td className="px-3 py-1.5 text-text-secondary hidden md:table-cell truncate max-w-[160px]" title={entry.local_addr}>
                 {entry.local_addr}
               </td>
-              <td className="px-3 py-1.5 text-text-muted">
+              <td className="px-3 py-1.5 text-text-muted hidden lg:table-cell truncate max-w-[160px]" title={entry.remote_addr ?? undefined}>
                 {entry.remote_addr ?? "-"}
               </td>
             </tr>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Folder, Plus, Trash2, Zap, Check, X, Loader2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import * as api from "../lib/api";
@@ -66,6 +66,7 @@ export function ConnectionForm({
 
   useEffect(() => {
     api.listSshKeys().then(setSshKeys).catch(() => {});
+    return () => clearTimeout(portCheckTimer.current);
   }, []);
 
   const isPortValid = (p: number) => p > 0 && p < 65536;
@@ -85,44 +86,50 @@ export function ConnectionForm({
       });
       if (path) {
         setKeyPath(path);
-        setForm({ ...form, identity_file: path });
+        setForm((prev) => ({ ...prev, identity_file: path }));
       }
     } catch (err) {
       console.error("Failed to select key file:", err);
     }
   };
 
-  const handlePortChange = async (port: number) => {
-    setForm({ ...form, local_port: port });
+  const portCheckTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handlePortChange = useCallback((port: number) => {
+    setForm((prev) => ({ ...prev, local_port: port }));
+    clearTimeout(portCheckTimer.current);
     if (port > 0 && port < 65536) {
-      try {
-        const available = await api.checkPortAvailable(port);
-        setPortConflict(available ? null : `Port ${port} is already in use`);
-      } catch {
-        setPortConflict(null);
-      }
+      portCheckTimer.current = setTimeout(async () => {
+        try {
+          const available = await api.checkPortAvailable(port);
+          setPortConflict(available ? null : `Port ${port} is already in use`);
+        } catch {
+          setPortConflict(null);
+        }
+      }, 300);
     }
-  };
+  }, []);
 
   const addJumpHost = () => {
-    setForm({
-      ...form,
-      jump_hosts: [...form.jump_hosts, { host: "", port: 22, user: "" }],
-    });
+    setForm((prev) => ({
+      ...prev,
+      jump_hosts: [...prev.jump_hosts, { host: "", port: 22, user: "" }],
+    }));
   };
 
   const updateJumpHost = (index: number, updates: Partial<JumpHost>) => {
-    const jump_hosts = form.jump_hosts.map((jh, i) =>
-      i === index ? { ...jh, ...updates } : jh,
-    );
-    setForm({ ...form, jump_hosts });
+    setForm((prev) => ({
+      ...prev,
+      jump_hosts: prev.jump_hosts.map((jh, i) =>
+        i === index ? { ...jh, ...updates } : jh,
+      ),
+    }));
   };
 
   const removeJumpHost = (index: number) => {
-    setForm({
-      ...form,
-      jump_hosts: form.jump_hosts.filter((_, i) => i !== index),
-    });
+    setForm((prev) => ({
+      ...prev,
+      jump_hosts: prev.jump_hosts.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,10 +155,6 @@ export function ConnectionForm({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-lg font-semibold tracking-tight text-text-primary mb-6">
-        {editing ? "Edit Connection" : "New Connection"}
-      </h2>
-
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Name */}
         <div>
@@ -445,10 +448,35 @@ export function ConnectionForm({
 
           {!isDynamic && (
             <>
+              {/* Visual traffic flow */}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface text-[11px] font-mono text-text-muted">
+                {form.forwarding_type === "local" ? (
+                  <>
+                    <span className="text-accent">localhost:{form.local_port || "?"}</span>
+                    <span className="text-text-muted">&rarr;</span>
+                    <span className="text-text-secondary">
+                      {form.remote_host || "remote"}:{form.remote_port || "?"}
+                    </span>
+                    <span className="ml-auto text-[10px] text-text-muted">Access remote service locally</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-text-secondary">
+                      remote:{form.local_port || "?"}
+                    </span>
+                    <span className="text-text-muted">&rarr;</span>
+                    <span className="text-accent">
+                      {form.remote_host || "localhost"}:{form.remote_port || "?"}
+                    </span>
+                    <span className="ml-auto text-[10px] text-text-muted">Expose local service remotely</span>
+                  </>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1.5">
                   {form.forwarding_type === "remote"
-                    ? "Target Host (local side)"
+                    ? "Destination Host"
                     : "Remote Host"}
                 </label>
                 <input
@@ -471,8 +499,8 @@ export function ConnectionForm({
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
                     {form.forwarding_type === "remote"
-                      ? "Remote Bind Port"
-                      : "Local Port"}
+                      ? "Listen Port (on remote)"
+                      : "Local Port (on your machine)"}
                   </label>
                   <input
                     type="number"
@@ -495,7 +523,7 @@ export function ConnectionForm({
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
                     {form.forwarding_type === "remote"
-                      ? "Target Port (local side)"
+                      ? "Destination Port"
                       : "Remote Port"}
                   </label>
                   <input
@@ -528,6 +556,9 @@ export function ConnectionForm({
                 className={`${inputClass} ${!localPortValid || portConflict ? "border-status-error focus:border-status-error" : ""}`}
                 placeholder="1080"
               />
+              <p className="text-[11px] text-text-muted mt-1">
+                Route traffic through this port as a SOCKS5 proxy
+              </p>
               {!localPortValid && (
                 <p className="text-[11px] text-status-error mt-1">Port must be 1–65535</p>
               )}
@@ -564,67 +595,74 @@ export function ConnectionForm({
             </p>
           )}
           {form.jump_hosts.map((jh, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-end"
-            >
-              <div>
-                {i === 0 && (
-                  <label className="block text-[11px] text-text-muted mb-1">
-                    User
-                  </label>
-                )}
-                <input
-                  type="text"
-                  required
-                  value={jh.user}
-                  onChange={(e) =>
-                    updateJumpHost(i, { user: e.target.value })
-                  }
-                  className={inputClass}
-                  placeholder="user"
-                />
+            <div key={i} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-semibold text-accent bg-accent/10 w-5 h-5 flex items-center justify-center rounded flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-[11px] text-text-muted">
+                  Hop {i + 1}{i === 0 ? " (first jump)" : i === form.jump_hosts.length - 1 ? " (final jump)" : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeJumpHost(i)}
+                  className="focus-ring ml-auto p-1 text-text-muted hover:text-status-error cursor-pointer transition-colors duration-150"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
-              <div>
-                {i === 0 && (
-                  <label className="block text-[11px] text-text-muted mb-1">
-                    Host
-                  </label>
-                )}
-                <input
-                  type="text"
-                  required
-                  value={jh.host}
-                  onChange={(e) =>
-                    updateJumpHost(i, { host: e.target.value })
-                  }
-                  className={inputClass}
-                  placeholder="jump-host"
-                />
+              <div className="grid grid-cols-[1fr_1fr_80px] gap-2 pl-7">
+                <div>
+                  {i === 0 && (
+                    <label className="block text-[11px] text-text-muted mb-1">
+                      User
+                    </label>
+                  )}
+                  <input
+                    type="text"
+                    required
+                    value={jh.user}
+                    onChange={(e) =>
+                      updateJumpHost(i, { user: e.target.value })
+                    }
+                    className={inputClass}
+                    placeholder="user"
+                  />
+                </div>
+                <div>
+                  {i === 0 && (
+                    <label className="block text-[11px] text-text-muted mb-1">
+                      Host
+                    </label>
+                  )}
+                  <input
+                    type="text"
+                    required
+                    value={jh.host}
+                    onChange={(e) =>
+                      updateJumpHost(i, { host: e.target.value })
+                    }
+                    className={inputClass}
+                    placeholder="jump-host"
+                  />
+                </div>
+                <div>
+                  {i === 0 && (
+                    <label className="block text-[11px] text-text-muted mb-1">
+                      Port
+                    </label>
+                  )}
+                  <input
+                    type="number"
+                    required
+                    value={jh.port}
+                    onChange={(e) =>
+                      updateJumpHost(i, { port: parseInt(e.target.value) })
+                    }
+                    className={inputClass}
+                  />
+                </div>
               </div>
-              <div>
-                {i === 0 && (
-                  <label className="block text-[11px] text-text-muted mb-1">
-                    Port
-                  </label>
-                )}
-                <input
-                  type="number"
-                  required
-                  value={jh.port}
-                  onChange={(e) =>
-                    updateJumpHost(i, { port: parseInt(e.target.value) })
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => removeJumpHost(i)}
-                className="focus-ring p-2 text-text-muted hover:text-status-error cursor-pointer transition-colors duration-150"
-              >
-                <Trash2 size={14} />
-              </button>
             </div>
           ))}
         </div>

@@ -120,6 +120,15 @@ input[type="number"] {
   animation: status-pulse 1.8s ease-in-out infinite;
 }
 
+/* Slide-in animation for drawers */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
 /* Glow effect for connected accent */
 @keyframes glow-pulse {
   0%, 100% { box-shadow: 0 0 8px 0 #d4944c30; }

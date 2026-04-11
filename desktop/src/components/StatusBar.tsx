@@ -49,17 +49,23 @@ export function StatusBar({ activeCount, totalCount, profiles, tunnelStates }: S
       {activeTunnels.length > 0 && (
         <>
           <span className="text-border">|</span>
-          <div className="flex gap-1.5 overflow-x-auto flex-1">
-            {activeTunnels.map((p) => (
+          <div className="flex gap-1.5 overflow-hidden flex-1 min-w-0">
+            {activeTunnels.slice(0, 4).map((p) => (
               <span
                 key={p.id}
-                className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded bg-status-connected/10 border border-status-connected/20 text-status-connected font-mono"
+                className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded bg-status-connected/10 border border-status-connected/20 text-status-connected font-mono truncate max-w-[160px]"
+                title={`${p.name} :${p.local_port}`}
               >
-                <span className="w-1 h-1 rounded-full bg-status-connected" />
-                {p.name}
-                <span className="text-status-connected/60">:{p.local_port}</span>
+                <span className="w-1 h-1 rounded-full bg-status-connected flex-shrink-0" />
+                <span className="truncate">{p.name}</span>
+                <span className="text-status-connected/60 flex-shrink-0">:{p.local_port}</span>
               </span>
             ))}
+            {activeTunnels.length > 4 && (
+              <span className="flex-shrink-0 px-2 py-0.5 rounded bg-surface text-text-muted font-mono">
+                +{activeTunnels.length - 4} more
+              </span>
+            )}
           </div>
         </>
       )}

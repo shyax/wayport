@@ -69,11 +69,7 @@ pub fn create_profile(
     profile.created_at = now.clone();
     profile.updated_at = now;
 
-    let mut profiles = store.get_profiles();
-    profiles.push(profile.clone());
-    store
-        .save_profiles(profiles)
-        .map_err(|e| e.to_string())?;
+    store.database().create_profile(&profile)?;
 
     Ok(profile)
 }
@@ -86,15 +82,7 @@ pub fn update_profile(
     let mut profile = profile;
     profile.updated_at = Utc::now().to_rfc3339();
 
-    let mut profiles = store.get_profiles();
-    profiles = profiles
-        .into_iter()
-        .map(|p| if p.id == profile.id { profile.clone() } else { p })
-        .collect();
-
-    store
-        .save_profiles(profiles)
-        .map_err(|e| e.to_string())?;
+    store.database().update_profile(&profile)?;
 
     Ok(profile)
 }

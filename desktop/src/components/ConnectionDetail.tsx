@@ -402,12 +402,19 @@ export function ConnectionDetail({
                 <div className="flex items-start gap-3">
                   <Globe size={14} className="text-text-muted mt-0.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs text-text-muted">Jump Hosts</span>
+                    <span className="text-xs text-text-muted">
+                      Jump Hosts ({profile.jump_hosts.length} hop{profile.jump_hosts.length !== 1 ? "s" : ""})
+                    </span>
                     <div className="mt-1 space-y-1">
                       {profile.jump_hosts.map((jh, i) => (
-                        <span key={i} className="block text-sm font-mono text-purple-400">
-                          {jh.user}@{jh.host}:{jh.port}
-                        </span>
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-semibold text-accent bg-accent/10 w-4 h-4 flex items-center justify-center rounded flex-shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm font-mono text-purple-400">
+                            {jh.user}@{jh.host}:{jh.port}
+                          </span>
+                        </div>
                       ))}
                     </div>
                   </div>

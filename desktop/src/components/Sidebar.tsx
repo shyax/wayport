@@ -15,7 +15,6 @@ import {
   Settings,
   Key,
   Layers,
-  Pin,
 } from "lucide-react";
 import { FolderTree } from "./FolderTree";
 import { ConnectionItem } from "./ConnectionItem";
@@ -49,6 +48,11 @@ interface SidebarProps {
   onStopAll?: () => void;
   onImportSshConfig?: () => void;
   onTogglePin?: (id: string) => void;
+  onConnect?: (id: string) => void;
+  onDisconnect?: (id: string) => void;
+  onEdit?: (profile: ConnectionProfile) => void;
+  onDuplicate?: (profile: ConnectionProfile) => void;
+  onDelete?: (id: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
@@ -85,6 +89,11 @@ export function Sidebar({
   onStopAll,
   onImportSshConfig,
   onTogglePin,
+  onConnect,
+  onDisconnect,
+  onEdit,
+  onDuplicate,
+  onDelete,
   searchQuery,
   onSearchChange,
 }: SidebarProps) {
@@ -117,7 +126,12 @@ export function Sidebar({
           p.name.toLowerCase().includes(q) ||
           p.bastion_host.toLowerCase().includes(q) ||
           p.ssh_user.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
+          (p.remote_host ?? "").toLowerCase().includes(q) ||
+          String(p.local_port).includes(q) ||
+          String(p.remote_port ?? "").includes(q) ||
+          (p.k8s_resource ?? "").toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)) ||
+          folders.some((f) => f.id === p.folder_id && f.name.toLowerCase().includes(q))
         );
       })
     : profiles;
@@ -149,29 +163,19 @@ export function Sidebar({
     return (
       <div className="space-y-0.5">
         {profileList.map((p) => (
-          <div key={p.id} className="group/item relative">
+          <div key={p.id}>
             <ConnectionItem
               profile={p}
               tunnelState={tunnelStates[p.id]}
               isSelected={selectedId === p.id}
               onSelect={() => onSelect(p.id)}
+              onConnect={onConnect}
+              onDisconnect={onDisconnect}
+              onEdit={onEdit}
+              onDuplicate={onDuplicate}
+              onDelete={onDelete}
+              onTogglePin={onTogglePin}
             />
-            {onTogglePin && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePin(p.id);
-                }}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
-                  p.is_pinned
-                    ? "text-accent opacity-100"
-                    : "text-text-muted opacity-0 group-hover/item:opacity-100 hover:text-text-secondary"
-                }`}
-                title={p.is_pinned ? "Unpin" : "Pin"}
-              >
-                <Pin size={11} className={p.is_pinned ? "fill-current" : ""} />
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -368,7 +372,7 @@ export function Sidebar({
                 renderProfileList(filteredProfiles, "")
               )
             ) : activeTab === "pinned" ? (
-              renderProfileList(pinnedProfiles, "No pinned connections. Right-click or hover to pin.")
+              renderProfileList(pinnedProfiles, "No pinned connections. Right-click a connection to pin it.")
             ) : activeTab === "recent" ? (
               renderProfileList(recentProfiles, "No recent connections yet.")
             ) : (

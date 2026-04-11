@@ -11,6 +11,8 @@ import { EnvironmentEditor } from "./components/EnvironmentEditor";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SSHKeyManager } from "./components/SSHKeyManager";
 import { TunnelGroupPanel } from "./components/TunnelGroupPanel";
+import { TunnelDashboard } from "./components/TunnelDashboard";
+import { Drawer } from "./components/Drawer";
 import * as api from "./lib/api";
 import { useProfileStore } from "./stores/profileStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
@@ -118,6 +120,10 @@ export default function App() {
     };
   }, []);
 
+  // Keep a ref for tunnelStates so the keyboard handler doesn't churn every poll
+  const tunnelStatesRef = useRef(tunnelStates);
+  tunnelStatesRef.current = tunnelStates;
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -147,7 +153,7 @@ export default function App() {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "BUTTON") {
           e.preventDefault();
-          const state = tunnelStates[selectedId];
+          const state = tunnelStatesRef.current[selectedId];
           if (!state || state.status === "disconnected" || state.status === "error") {
             handleConnect(selectedId);
           }
@@ -157,7 +163,7 @@ export default function App() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [showForm, selectedId, tunnelStates]);
+  }, [showForm, selectedId]);
 
   const selectedProfile = profiles.find((p) => p.id === selectedId);
   const selectedTunnelState = selectedId ? tunnelStates[selectedId] : undefined;
@@ -310,21 +316,6 @@ export default function App() {
     }
 
     // Default: connections view
-    if (showForm) {
-      return (
-        <ConnectionForm
-          editing={editingProfile}
-          folders={folders}
-          onSave={
-            editingProfile
-              ? (d) => handleUpdate(d as ConnectionProfile)
-              : handleCreate
-          }
-          onCancel={hideForm}
-        />
-      );
-    }
-
     if (selectedProfile) {
       return (
         <ConnectionDetail
@@ -339,7 +330,19 @@ export default function App() {
       );
     }
 
-    return <EmptyState onAdd={showCreateForm} onImportSshConfig={handleImportSshConfig} />;
+    if (profiles.length === 0) {
+      return <EmptyState onAdd={showCreateForm} onImportSshConfig={handleImportSshConfig} />;
+    }
+
+    return (
+      <TunnelDashboard
+        profiles={profiles}
+        tunnelStates={tunnelStates}
+        onSelect={(id) => select(id)}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+      />
+    );
   };
 
   return (
@@ -368,20 +371,46 @@ export default function App() {
             onStopAll={handleStopAll}
             onImportSshConfig={handleImportSshConfig}
             onTogglePin={handleTogglePin}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onEdit={(profile) => {
+              showEditForm(profile);
+              setCurrentView("connections");
+            }}
+            onDuplicate={handleDuplicate}
+            onDelete={deleteProfile}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
-          <main className="flex-1 min-w-0 overflow-y-auto p-8">
-            {currentView !== "connections" && (
-              <div className="mb-6">
-                <h1 className="text-lg font-semibold tracking-tight text-text-primary">
-                  {VIEW_TITLES[currentView]}
-                </h1>
-                <div className="mt-2 h-px bg-border" />
-              </div>
-            )}
-            {renderMainContent()}
-          </main>
+          <div className="flex-1 min-w-0 relative">
+            <main className="h-full overflow-y-auto p-8">
+              {currentView !== "connections" && (
+                <div className="mb-6">
+                  <h1 className="text-lg font-semibold tracking-tight text-text-primary">
+                    {VIEW_TITLES[currentView]}
+                  </h1>
+                  <div className="mt-2 h-px bg-border" />
+                </div>
+              )}
+              {renderMainContent()}
+            </main>
+            <Drawer
+              open={showForm}
+              onClose={hideForm}
+              title={editingProfile ? "Edit Connection" : "New Connection"}
+            >
+              <ConnectionForm
+                editing={editingProfile}
+                folders={folders}
+                onSave={
+                  editingProfile
+                    ? (d) => handleUpdate(d as ConnectionProfile)
+                    : handleCreate
+                }
+                onCancel={hideForm}
+              />
+            </Drawer>
+          </div>
         </div>
         <StatusBar
           activeCount={activeCount}
