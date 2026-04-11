@@ -14,3 +14,6 @@ target/
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+
+# Vercel
+.vercel/
