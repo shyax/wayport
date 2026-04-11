@@ -6,7 +6,70 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  # ── CLI binaries ──────────────────────────────────────────────────
+  cli:
+    name: CLI ${{ matrix.name }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            name: darwin-arm64
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            name: darwin-x64
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            name: linux-amd64
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-x64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Build CLI
+        run: cargo build -p wayport-cli --release --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: matrix.platform != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../wayport-${{ matrix.name }}.tar.gz wayport
+          cd ../../..
+          shasum -a 256 wayport-${{ matrix.name }}.tar.gz > wayport-${{ matrix.name }}.tar.gz.sha256
+
+      - name: Package (windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/${{ matrix.target }}/release/wayport.exe" -DestinationPath "wayport-${{ matrix.name }}.zip"
+          (Get-FileHash "wayport-${{ matrix.name }}.zip" -Algorithm SHA256).Hash.ToLower() + "  wayport-${{ matrix.name }}.zip" | Out-File -Encoding ascii "wayport-${{ matrix.name }}.zip.sha256"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            wayport-${{ matrix.name }}.*
+
+  # ── Desktop app (Tauri) ──────────────────────────────────────────
+  desktop:
+    name: Desktop ${{ matrix.name }}
     permissions:
       contents: write
     strategy:
@@ -27,7 +90,6 @@ jobs:
             name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
-    name: Build ${{ matrix.name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -80,11 +142,22 @@ jobs:
           releaseBody: |
             See [CHANGELOG.md](https://github.com/shyax/wayport/blob/main/CHANGELOG.md) for release notes.
 
-            **Downloads**
+            **Desktop App**
             - macOS (Apple Silicon): `Wayport_*_aarch64.dmg`
             - macOS (Intel): `Wayport_*_x64.dmg`
             - Windows: `Wayport_*_x64-setup.exe`
             - Linux: `wayport_*_amd64.AppImage` / `wayport_*_amd64.deb`
+
+            **CLI**
+            - macOS (Apple Silicon): `wayport-darwin-arm64.tar.gz`
+            - macOS (Intel): `wayport-darwin-x64.tar.gz`
+            - Linux: `wayport-linux-amd64.tar.gz`
+            - Windows: `wayport-windows-x64.zip`
+
+            **Install CLI via Homebrew:**
+            ```
+            brew install shyax/tap/wayport
+            ```
           releaseDraft: true
           prerelease: false
           projectPath: ./desktop

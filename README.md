@@ -35,7 +35,9 @@ Save connection profiles, connect with one click, and keep your tunnels alive au
 - **Cross-platform** — macOS, Windows, and Linux via Tauri v2
 - **Tiny binary** — ~5-10 MB download (vs. Electron's 150 MB)
 
-## Download
+## Install
+
+### Desktop app
 
 Get the latest release from the [GitHub Releases](https://github.com/shyax/wayport/releases) page.
 
@@ -45,6 +47,29 @@ Get the latest release from the [GitHub Releases](https://github.com/shyax/waypo
 | macOS (Intel) | `Wayport_*_x64.dmg` |
 | Windows | `Wayport_*_x64-setup.exe` |
 | Linux | `wayport_*_amd64.AppImage` |
+
+### CLI
+
+**Homebrew** (macOS / Linux):
+
+```bash
+brew install shyax/tap/wayport
+```
+
+**Manual download** — grab the binary from [GitHub Releases](https://github.com/shyax/wayport/releases):
+
+| Platform | File |
+|----------|------|
+| macOS (Apple Silicon) | `wayport-darwin-arm64.tar.gz` |
+| macOS (Intel) | `wayport-darwin-x64.tar.gz` |
+| Linux | `wayport-linux-amd64.tar.gz` |
+| Windows | `wayport-windows-x64.zip` |
+
+**From source:**
+
+```bash
+cargo install --path cli
+```
 
 ## Tech Stack
 
