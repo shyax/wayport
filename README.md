@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="screenshot.png" alt="Wayport" width="720" />
+  <img src="docs/screenshot.png" alt="Wayport" width="720" />
 </p>
 
 <h1 align="center">Wayport</h1>

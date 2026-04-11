@@ -17,7 +17,7 @@ target/
 
 # Private
 infra/
-docs/
+dev-docs/
 IMPLEMENTATION_PLAN.md
 NEXT_STEPS.md
 
