@@ -15,18 +15,7 @@ Desktop App ──► API Gateway ──► Lambda ──► DynamoDB
 - **Lambda** (3 functions) — sync-push, sync-pull, sync-delete
 - **DynamoDB** — profile/folder/environment storage (pay-per-request)
 
-## Choose your deployment tool
-
-### Option A: CDK (TypeScript)
-
-```bash
-cd infra
-npm install
-npx cdk bootstrap   # first time only
-npx cdk deploy
-```
-
-### Option B: Terraform
+## Deploy
 
 ```bash
 cd infra/terraform
@@ -34,8 +23,6 @@ terraform init
 terraform plan
 terraform apply
 ```
-
-Both create identical resources.
 
 ## After deployment
 
@@ -50,7 +37,7 @@ VITE_SYNC_API_URL=<ApiUrl>
 
 ### Deploying Lambda code
 
-The Terraform setup uses placeholder Lambdas. To deploy the real handlers:
+Terraform provisions placeholder Lambdas. To deploy the real handlers:
 
 ```bash
 cd infra
@@ -64,8 +51,6 @@ aws lambda update-function-code --function-name porthole-sync-push --zip-file fi
 aws lambda update-function-code --function-name porthole-sync-pull --zip-file fileb://.build/sync-pull.zip
 aws lambda update-function-code --function-name porthole-sync-delete --zip-file fileb://.build/sync-delete.zip
 ```
-
-The CDK stack handles bundling automatically via `NodejsFunction`.
 
 ## Estimated cost
 
