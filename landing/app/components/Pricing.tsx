@@ -16,52 +16,20 @@ interface PricingTier {
 
 const tiers: PricingTier[] = [
   {
-    name: "Free",
-    price: "$0",
-    description: "For individual developers.",
+    name: "Open Source",
+    price: "Free",
+    description: "Everything. No limits. MIT licensed.",
     features: [
-      "Unlimited local tunnels",
+      "Unlimited tunnels & profiles",
       "Auto-reconnect",
-      "Port scanner",
+      "Port scanner & monitor",
       "Folders & environments",
       "Connection history",
       "Import / export",
+      "CLI included",
     ],
     cta: "Download for free",
-  },
-  {
-    name: "Pro",
-    price: "$8",
-    period: "/mo",
-    description: "For power users.",
-    features: [
-      "Everything in Free",
-      "Cloud sync",
-      "Unlimited profiles",
-      "30-day history",
-      "Priority support",
-    ],
-    cta: "Join waitlist",
     featured: true,
-    badge: "Coming soon",
-    comingSoon: true,
-  },
-  {
-    name: "Team",
-    price: "$12",
-    period: "/user/mo",
-    description: "For engineering teams.",
-    features: [
-      "Everything in Pro",
-      "Team workspaces",
-      "Role-based access",
-      "Shared environments",
-      "90-day audit log",
-      "Up to 20 members",
-    ],
-    cta: "Join waitlist",
-    comingSoon: true,
-    badge: "Coming soon",
   },
 ];
 
@@ -106,7 +74,7 @@ export default function Pricing() {
             className="text-3xl sm:text-4xl md:text-5xl text-text leading-tight"
             style={{ fontFamily: "var(--font-serif)" }}
           >
-            Start free. Scale with your team.
+            Free and open source. Always.
           </motion.h2>
         </div>
 
@@ -116,7 +84,7 @@ export default function Pricing() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 items-start"
+          className="max-w-sm mx-auto"
         >
           {tiers.map((tier) => (
             <article

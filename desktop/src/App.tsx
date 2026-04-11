@@ -7,7 +7,6 @@ import { EmptyState } from "./components/EmptyState";
 import { PortUtilities } from "./components/PortUtilities";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { EnvironmentEditor } from "./components/EnvironmentEditor";
-import { AuthGate } from "./components/AuthGate";
 import * as api from "./lib/api";
 import { useProfileStore } from "./stores/profileStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
@@ -317,8 +316,7 @@ export default function App() {
   };
 
   return (
-    <AuthGate>
-      <div className="flex flex-col h-screen bg-bg">
+    <div className="flex flex-col h-screen bg-bg">
         <div className="flex flex-1 overflow-hidden">
           <Sidebar
             profiles={profiles}
@@ -362,6 +360,5 @@ export default function App() {
           tunnelStates={tunnelStates}
         />
       </div>
-    </AuthGate>
   );
 }

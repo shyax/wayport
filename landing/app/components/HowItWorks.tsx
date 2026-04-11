@@ -28,7 +28,7 @@ const steps: Step[] = [
     number: "03",
     title: "Share with your team",
     description:
-      "Export your config or sync it to a workspace. New engineers get every tunnel on day one.",
+      "Export your config and share it with the team. New engineers get every tunnel on day one.",
     code: `team-config.json`,
   },
 ];

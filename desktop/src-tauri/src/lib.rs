@@ -6,6 +6,8 @@ pub mod commands;
 pub mod port_utils;
 
 use tauri::Manager;
+use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,6 +40,73 @@ pub fn run() {
       app.manage(store);
       app.manage(tunnel_manager);
       app.manage(port_monitor_manager);
+
+      // ── System tray ──────────────────────────────────────────────────
+      let show_item = MenuItem::with_id(app, "show", "Show Porthole", true, None::<&str>)?;
+      let sep1 = PredefinedMenuItem::separator(app)?;
+      let disconnect_item = MenuItem::with_id(app, "disconnect_all", "Disconnect All", true, None::<&str>)?;
+      let sep2 = PredefinedMenuItem::separator(app)?;
+      let quit_item = MenuItem::with_id(app, "quit", "Quit Porthole", true, None::<&str>)?;
+
+      let menu = Menu::with_items(app, &[
+          &show_item,
+          &sep1,
+          &disconnect_item,
+          &sep2,
+          &quit_item,
+      ])?;
+
+      TrayIconBuilder::with_id("main-tray")
+          .icon(app.default_window_icon().unwrap().clone())
+          .menu(&menu)
+          .tooltip("Porthole — No active tunnels")
+          .on_menu_event(|app, event| {
+              match event.id().as_ref() {
+                  "show" => {
+                      if let Some(window) = app.get_webview_window("main") {
+                          let _ = window.show();
+                          let _ = window.set_focus();
+                      }
+                  }
+                  "disconnect_all" => {
+                      let tm = app.state::<tunnel_manager::TunnelManager>();
+                      tm.stop_all_tunnels();
+                      commands::update_tray_tooltip(app);
+                  }
+                  "quit" => {
+                      let tm = app.state::<tunnel_manager::TunnelManager>();
+                      tm.stop_all_tunnels();
+                      app.exit(0);
+                  }
+                  _ => {}
+              }
+          })
+          .on_tray_icon_event(|tray, event| {
+              if let TrayIconEvent::Click {
+                  button: MouseButton::Left,
+                  button_state: MouseButtonState::Up,
+                  ..
+              } = event
+              {
+                  let app = tray.app_handle();
+                  if let Some(window) = app.get_webview_window("main") {
+                      let _ = window.show();
+                      let _ = window.set_focus();
+                  }
+              }
+          })
+          .build(app)?;
+
+      // ── Close to tray instead of quitting ─────────────────────────
+      if let Some(window) = app.get_webview_window("main") {
+          let w = window.clone();
+          window.on_window_event(move |event| {
+              if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                  api.prevent_close();
+                  let _ = w.hide();
+              }
+          });
+      }
 
       Ok(())
     })

@@ -1,9 +1,35 @@
-use tauri::{State, AppHandle, Emitter};
+use tauri::{State, AppHandle, Emitter, Manager};
 use uuid::Uuid;
 use chrono::Utc;
-use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, Workspace, ForwardingType};
+use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelState, TunnelStatus, Workspace, ForwardingType};
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
+
+/// Update the system tray tooltip with the current active tunnel count.
+pub fn update_tray_tooltip(app: &AppHandle) {
+    let tm = app.state::<TunnelManager>();
+    let states = tm.get_states();
+
+    let mut active = states.values()
+        .filter(|s| s.status == TunnelStatus::Connected)
+        .count();
+
+    // Count CLI-started tunnels not already tracked by the GUI
+    for (profile_id, pid, _source) in porthole_core::pid::list_active_tunnels() {
+        if !states.contains_key(&profile_id) && porthole_core::pid::is_process_alive(pid) {
+            active += 1;
+        }
+    }
+
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        let tooltip = match active {
+            0 => "Porthole — No active tunnels".to_string(),
+            1 => "Porthole — 1 active tunnel".to_string(),
+            n => format!("Porthole — {} active tunnels", n),
+        };
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
+}
 
 #[tauri::command]
 pub fn list_profiles(store: State<Store>) -> Vec<ConnectionProfile> {
@@ -89,6 +115,7 @@ pub fn start_tunnel(
     let app_clone = app.clone();
     tunnel_manager.start_tunnel(profile, move |state| {
         let _ = app_clone.emit("tunnel-state-update", &state);
+        update_tray_tooltip(&app_clone);
     });
 
     Ok(())
@@ -126,17 +153,19 @@ pub fn stop_tunnel(profile_id: String, tunnel_manager: State<TunnelManager>, app
         connected_since: None,
         reconnect_attempt: 0,
     });
+    update_tray_tooltip(&app);
     Ok(())
 }
 
 #[tauri::command]
-pub fn stop_all_tunnels(tunnel_manager: State<TunnelManager>) -> Result<(), String> {
+pub fn stop_all_tunnels(tunnel_manager: State<TunnelManager>, app: AppHandle) -> Result<(), String> {
     tunnel_manager.stop_all_tunnels();
+    update_tray_tooltip(&app);
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>) -> std::collections::HashMap<String, TunnelState> {
+pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -> std::collections::HashMap<String, TunnelState> {
     let mut states = tunnel_manager.get_states();
 
     // Merge in CLI-started tunnels from PID files
@@ -164,6 +193,19 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>) -> std::collectio
         }
         true
     });
+
+    // Keep tray tooltip in sync on every poll
+    let active = states.values()
+        .filter(|s| s.status == TunnelStatus::Connected)
+        .count();
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        let tooltip = match active {
+            0 => "Porthole — No active tunnels".to_string(),
+            1 => "Porthole — 1 active tunnel".to_string(),
+            n => format!("Porthole — {} active tunnels", n),
+        };
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
 
     states
 }

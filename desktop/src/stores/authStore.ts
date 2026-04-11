@@ -1,103 +1,76 @@
 import { create } from "zustand";
-import { supabase, isCloudEnabled } from "../lib/supabase";
-import type { User, Session } from "@supabase/supabase-js";
+import {
+  isCloudEnabled,
+  getTokens,
+  setTokens,
+  isTokenExpired,
+  refreshAccessToken,
+  AuthTokens,
+} from "../lib/auth";
 
 export type AuthMode = "offline" | "authenticated" | "loading";
 
 interface AuthState {
-  user: User | null;
-  session: Session | null;
   mode: AuthMode;
+  email: string | null;
   error: string | null;
 
-  initialize: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  signInWithOAuth: (provider: "github" | "google") => Promise<void>;
-  signOut: () => Promise<void>;
+  initialize: () => void;
+  handleAuthCallback: (tokens: AuthTokens, email: string) => void;
+  signOut: () => void;
   continueOffline: () => void;
+  getValidToken: () => Promise<string | null>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  session: null,
+export const useAuthStore = create<AuthState>((set, get) => ({
   mode: isCloudEnabled ? "loading" : "offline",
+  email: null,
   error: null,
 
-  initialize: async () => {
-    if (!supabase) {
+  initialize: () => {
+    if (!isCloudEnabled) {
       set({ mode: "offline" });
       return;
     }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session) {
-      set({
-        user: session.user,
-        session,
-        mode: "authenticated",
-      });
+    // Check if we have stored tokens
+    const tokens = getTokens();
+    if (tokens && !isTokenExpired()) {
+      set({ mode: "authenticated" });
     } else {
-      set({ mode: "loading" }); // show login screen
+      set({ mode: "loading" }); // show login
     }
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        set({
-          user: session.user,
-          session,
-          mode: "authenticated",
-          error: null,
-        });
-      } else {
-        set({ user: null, session: null });
-      }
-    });
   },
 
-  signInWithEmail: async (email, password) => {
-    if (!supabase) return;
-    set({ error: null });
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) set({ error: error.message });
+  handleAuthCallback: (tokens: AuthTokens, email: string) => {
+    setTokens(tokens);
+    set({ mode: "authenticated", email, error: null });
   },
 
-  signUp: async (email, password, displayName) => {
-    if (!supabase) return;
-    set({ error: null });
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name: displayName } },
-    });
-    if (error) set({ error: error.message });
-  },
-
-  signInWithOAuth: async (provider) => {
-    if (!supabase) return;
-    set({ error: null });
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: "porthole://auth/callback",
-      },
-    });
-    if (error) set({ error: error.message });
-  },
-
-  signOut: async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    set({ user: null, session: null, mode: "loading", error: null });
+  signOut: () => {
+    setTokens(null);
+    set({ mode: "loading", email: null, error: null });
   },
 
   continueOffline: () => {
     set({ mode: "offline", error: null });
+  },
+
+  getValidToken: async () => {
+    const tokens = getTokens();
+    if (!tokens) return null;
+
+    if (isTokenExpired()) {
+      try {
+        const refreshed = await refreshAccessToken(tokens.refreshToken);
+        setTokens(refreshed);
+        return refreshed.accessToken;
+      } catch {
+        get().signOut();
+        return null;
+      }
+    }
+
+    return tokens.accessToken;
   },
 }));

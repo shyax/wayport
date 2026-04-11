@@ -41,6 +41,9 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+      - name: Test
+        run: cargo test --workspace
+
   check-desktop:
     name: Desktop TypeScript
     runs-on: ubuntu-22.04
@@ -60,6 +63,10 @@ jobs:
 
       - name: TypeScript check
         run: npx tsc --noEmit
+        working-directory: desktop
+
+      - name: Lint
+        run: npx eslint src/
         working-directory: desktop
 
   check-landing:

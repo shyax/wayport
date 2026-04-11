@@ -1,26 +1,32 @@
-use crate::config::auth_path;
+use crate::config::config_dir;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct AuthState {
-    pub access_token: Option<String>,
-    pub refresh_token: Option<String>,
-    pub user_email: Option<String>,
-    pub expires_at: Option<String>,
+fn auth_path() -> PathBuf {
+    config_dir().join("auth.json")
 }
 
-pub fn load_auth() -> Option<AuthState> {
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AuthTokens {
+    pub access_token: Option<String>,
+    pub id_token: Option<String>,
+    pub refresh_token: Option<String>,
+    pub email: Option<String>,
+    pub expires_at: Option<i64>, // epoch ms
+}
+
+pub fn load_tokens() -> Option<AuthTokens> {
     let path = auth_path();
     let content = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
 }
 
-pub fn save_auth(state: &AuthState) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
+pub fn save_tokens(tokens: &AuthTokens) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(tokens).map_err(|e| e.to_string())?;
     std::fs::write(auth_path(), json).map_err(|e| e.to_string())
 }
 
-pub fn clear_auth() -> Result<(), String> {
+pub fn clear_tokens() -> Result<(), String> {
     let path = auth_path();
     if path.exists() {
         std::fs::remove_file(path).map_err(|e| e.to_string())?;
@@ -29,8 +35,8 @@ pub fn clear_auth() -> Result<(), String> {
 }
 
 pub fn is_authenticated() -> bool {
-    load_auth()
-        .and_then(|s| s.access_token)
+    load_tokens()
+        .and_then(|t| t.access_token)
         .map(|t| !t.is_empty())
         .unwrap_or(false)
 }

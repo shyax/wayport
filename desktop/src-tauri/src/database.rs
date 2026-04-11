@@ -77,15 +77,6 @@ CREATE TABLE IF NOT EXISTS connection_history (
     created_at        TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS sync_queue (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    table_name TEXT NOT NULL,
-    record_id  TEXT NOT NULL,
-    operation  TEXT NOT NULL,
-    payload    TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS preferences (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

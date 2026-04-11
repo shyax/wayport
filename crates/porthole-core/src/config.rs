@@ -25,10 +25,6 @@ pub fn config_dir() -> PathBuf {
     dir
 }
 
-pub fn auth_path() -> PathBuf {
-    config_dir().join("auth.json")
-}
-
 pub fn tunnels_dir() -> PathBuf {
     let dir = config_dir().join("tunnels");
     std::fs::create_dir_all(&dir).ok();

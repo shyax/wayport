@@ -30,17 +30,9 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-base font-semibold text-text mb-3">Data we collect</h2>
           <p>
-            The free version of Porthole collects no data whatsoever. The app makes no
+            Porthole collects no data whatsoever. The app makes no
             network requests except to the SSH hosts you explicitly configure.
           </p>
-          <p className="mt-3">
-            If you sign up for a Pro or Team account (coming soon), we will collect:
-          </p>
-          <ul className="mt-3 space-y-1.5 list-disc list-inside">
-            <li>Your email address (for authentication and account management)</li>
-            <li>Profile data you choose to sync to the cloud</li>
-            <li>Basic usage metrics (feature usage counts, crash reports)</li>
-          </ul>
         </section>
 
         <section>
@@ -82,7 +74,7 @@ export default function PrivacyPage() {
             <code className="text-accent" style={{ fontFamily: "var(--font-mono)" }}>
               ~/.config/Porthole/
             </code>{" "}
-            at any time. For questions about account data (Pro/Team), email us at{" "}
+            at any time. For questions, email us at{" "}
             <a
               href="mailto:privacy@porthole.dev"
               className="text-accent hover:underline"
