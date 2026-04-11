@@ -1,0 +1,29 @@
+variable "aws_region" {
+  description = "AWS region to deploy to"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "project_name" {
+  description = "Project name used for resource naming"
+  type        = string
+  default     = "porthole"
+}
+
+variable "cognito_domain_prefix" {
+  description = "Cognito hosted UI domain prefix (must be globally unique)"
+  type        = string
+  default     = "porthole-auth"
+}
+
+variable "callback_urls" {
+  description = "OAuth callback URLs for the desktop app"
+  type        = list(string)
+  default     = ["porthole://auth/callback"]
+}
+
+variable "logout_urls" {
+  description = "OAuth logout URLs for the desktop app"
+  type        = list(string)
+  default     = ["porthole://auth/logout"]
+}
