@@ -70,13 +70,11 @@ impl TunnelManager {
             connected_since: None,
             reconnect_attempt: 0,
         };
-        on_state_update(connecting_state.clone());
-
         // Create tunnel
         let tunnel = ManagedTunnel {
             profile_id: profile_id.clone(),
             process: None,
-            state: connecting_state,
+            state: connecting_state.clone(),
             reconnect_timer: None,
             logs: Vec::new(),
             local_port: profile.local_port,
@@ -85,6 +83,10 @@ impl TunnelManager {
         };
         tunnels.insert(profile_id.clone(), tunnel);
         drop(tunnels);
+
+        // Notify after releasing the write lock to avoid deadlock —
+        // the callback calls update_tray_tooltip which read-locks the same RwLock.
+        on_state_update(connecting_state);
 
         // Spawn tunnel in background
         let tunnels = self.tunnels.clone();
