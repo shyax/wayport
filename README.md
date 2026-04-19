@@ -78,6 +78,20 @@ brew install shyax/tap/wayport
 cargo install --path cli
 ```
 
+## macOS Security Warning
+
+When opening Wayport on macOS for the first time, you may see:
+
+> "Apple could not verify Wayport.app is free of malware..."
+
+This happens because the app isn't notarized yet. To bypass it, run:
+
+```bash
+xattr -cr /Applications/Wayport.app
+```
+
+Then open the app normally.
+
 ## Tech Stack
 
 | Layer | Technology |
