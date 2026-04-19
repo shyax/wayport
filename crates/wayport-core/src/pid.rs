@@ -70,6 +70,26 @@ pub fn is_process_alive(pid: u32) -> bool {
     result
 }
 
+pub fn kill_process(pid: u32) {
+    #[cfg(unix)]
+    unsafe {
+        libc::kill(pid as i32, libc::SIGTERM);
+    }
+
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+        unsafe {
+            let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+            if !handle.is_null() {
+                TerminateProcess(handle, 1);
+                CloseHandle(handle);
+            }
+        }
+    }
+}
+
 pub fn list_active_tunnels() -> Vec<(String, u32, ActionSource, Option<String>)> {
     let dir = tunnels_dir();
     let mut active = Vec::new();

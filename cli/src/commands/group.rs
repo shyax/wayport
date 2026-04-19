@@ -161,9 +161,7 @@ pub fn disconnect(workspace: &str, name: &str) -> Result<(), String> {
     for profile_id in &group.profile_ids {
         if let Some((pid_val, _)) = pid::read_pid(profile_id) {
             if pid::is_process_alive(pid_val) {
-                unsafe {
-                    libc::kill(pid_val as i32, libc::SIGTERM);
-                }
+                pid::kill_process(pid_val);
                 stopped += 1;
             }
             pid::remove_pid(profile_id);

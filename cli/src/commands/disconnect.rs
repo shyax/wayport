@@ -18,10 +18,7 @@ pub fn run(workspace: &str, name: &str) -> Result<(), String> {
         ));
     }
 
-    // Kill the SSH process
-    unsafe {
-        libc::kill(child_pid as i32, libc::SIGTERM);
-    }
+    pid::kill_process(child_pid);
     pid::remove_pid(&profile.id);
 
     history::record_action(
