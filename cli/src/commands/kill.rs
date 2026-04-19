@@ -1,5 +1,5 @@
-use wayport_core::port_utils;
 use crate::output;
+use wayport_core::port_utils;
 
 pub fn run(port: u16) -> Result<(), String> {
     let msg = port_utils::kill_port(port)?;

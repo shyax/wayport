@@ -1,5 +1,11 @@
-use wayport_core::{config, database::Database, tunnel_manager::TunnelManager, pid, types::{ActionSource, ForwardingType}, history};
 use crate::output;
+use wayport_core::{
+    config,
+    database::Database,
+    history, pid,
+    tunnel_manager::TunnelManager,
+    types::{ActionSource, ForwardingType},
+};
 
 fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String {
     let mut result = s.to_string();
@@ -11,8 +17,12 @@ fn resolve(s: &str, vars: &std::collections::HashMap<String, String>) -> String 
 
 pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
-    let mut profile = db.get_profile_by_name(workspace, name)
-        .ok_or_else(|| format!("Profile \"{}\" not found. Run `wayport ls` to see available profiles.", name))?;
+    let mut profile = db.get_profile_by_name(workspace, name).ok_or_else(|| {
+        format!(
+            "Profile \"{}\" not found. Run `wayport ls` to see available profiles.",
+            name
+        )
+    })?;
 
     // Apply active environment variables
     let envs = db.get_environments(workspace);
@@ -41,13 +51,20 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
 
     let is_k8s = profile.forwarding_type == ForwardingType::Kubernetes;
     let (cmd, args) = if is_k8s {
-        ("kubectl".to_string(), TunnelManager::build_kubectl_args(&profile))
+        (
+            "kubectl".to_string(),
+            TunnelManager::build_kubectl_args(&profile),
+        )
     } else {
         ("ssh".to_string(), TunnelManager::build_ssh_args(&profile))
     };
 
     let remote = if is_k8s {
-        format!("{}:{}", profile.k8s_resource.as_deref().unwrap_or("pod"), profile.k8s_resource_port.unwrap_or(0))
+        format!(
+            "{}:{}",
+            profile.k8s_resource.as_deref().unwrap_or("pod"),
+            profile.k8s_resource_port.unwrap_or(0)
+        )
     } else {
         match (&profile.remote_host, profile.remote_port) {
             (Some(h), Some(p)) => format!("{}:{}", h, p),
@@ -68,8 +85,12 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
         pid::write_pid(&profile.id, child_pid, ActionSource::Cli)?;
 
         history::record_action(
-            &db, workspace, Some(&profile.id), &profile.name,
-            "connect", ActionSource::Cli,
+            &db,
+            workspace,
+            Some(&profile.id),
+            &profile.name,
+            "connect",
+            ActionSource::Cli,
             Some(format!("localhost:{} -> {}", profile.local_port, remote)),
             None,
         )?;
@@ -92,8 +113,12 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
         pid::write_pid(&profile.id, child_pid, ActionSource::Cli)?;
 
         history::record_action(
-            &db, workspace, Some(&profile.id), &profile.name,
-            "connect", ActionSource::Cli,
+            &db,
+            workspace,
+            Some(&profile.id),
+            &profile.name,
+            "connect",
+            ActionSource::Cli,
             Some(format!("localhost:{} -> {}", profile.local_port, remote)),
             None,
         )?;
@@ -109,11 +134,16 @@ pub fn run(workspace: &str, name: &str, detach: bool) -> Result<(), String> {
         pid::remove_pid(&profile.id);
 
         history::record_action(
-            &db, workspace, Some(&profile.id), &profile.name,
-            "disconnect", ActionSource::Cli,
+            &db,
+            workspace,
+            Some(&profile.id),
+            &profile.name,
+            "disconnect",
+            ActionSource::Cli,
             Some(format!("Exit code: {:?}", status.code())),
             None,
-        ).ok();
+        )
+        .ok();
 
         if !status.success() {
             return Err(format!("SSH exited with code {:?}", status.code()));

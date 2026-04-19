@@ -1,6 +1,6 @@
+use crate::output;
 use comfy_table::{Cell, Color};
 use wayport_core::port_utils;
-use crate::output;
 
 pub fn run(port_arg: &str, json: bool) -> Result<(), String> {
     let results = if port_arg.contains('-') {
@@ -14,7 +14,10 @@ pub fn run(port_arg: &str, json: bool) -> Result<(), String> {
     };
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&results).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&results).unwrap_or_default()
+        );
         return Ok(());
     }
 
@@ -23,7 +26,14 @@ pub fn run(port_arg: &str, json: bool) -> Result<(), String> {
         return Ok(());
     }
 
-    let mut table = output::table(&["Port", "PID", "Process", "State", "Local Addr", "Remote Addr"]);
+    let mut table = output::table(&[
+        "Port",
+        "PID",
+        "Process",
+        "State",
+        "Local Addr",
+        "Remote Addr",
+    ]);
     for r in &results {
         let state_color = match r.state.as_str() {
             "LISTEN" => Color::Green,

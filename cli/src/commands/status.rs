@@ -1,6 +1,6 @@
+use crate::output;
 use comfy_table::{Cell, Color};
 use wayport_core::{config, database::Database, pid};
-use crate::output;
 
 pub fn run(json: bool, verbose: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
@@ -28,12 +28,17 @@ pub fn run(json: bool, verbose: bool) -> Result<(), String> {
                 "connected_since": connected_since,
             }))
         }).collect();
-        println!("{}", serde_json::to_string_pretty(&entries).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&entries).unwrap_or_default()
+        );
         return Ok(());
     }
 
     let headers: &[&str] = if verbose {
-        &["Tunnel", "Local", "Remote", "Status", "Uptime", "Source", "PID"]
+        &[
+            "Tunnel", "Local", "Remote", "Status", "Uptime", "Source", "PID",
+        ]
     } else {
         &["Tunnel", "Local", "Remote", "Status", "Source", "PID"]
     };
@@ -43,13 +48,22 @@ pub fn run(json: bool, verbose: bool) -> Result<(), String> {
     for (profile_id, child_pid, source, connected_since) in &active {
         let profile = profiles.iter().find(|p| p.id == *profile_id);
         let name = profile.map(|p| p.name.as_str()).unwrap_or("unknown");
-        let local = profile.map(|p| format!("localhost:{}", p.local_port)).unwrap_or_default();
-        let remote = profile.map(|p| {
-            format!("{}:{}", p.remote_host.as_deref().unwrap_or("-"), p.remote_port.unwrap_or(0))
-        }).unwrap_or_default();
+        let local = profile
+            .map(|p| format!("localhost:{}", p.local_port))
+            .unwrap_or_default();
+        let remote = profile
+            .map(|p| {
+                format!(
+                    "{}:{}",
+                    p.remote_host.as_deref().unwrap_or("-"),
+                    p.remote_port.unwrap_or(0)
+                )
+            })
+            .unwrap_or_default();
 
         if verbose {
-            let uptime = connected_since.as_deref()
+            let uptime = connected_since
+                .as_deref()
                 .map(output::format_uptime)
                 .unwrap_or_else(|| "-".to_string());
             table.add_row(vec![

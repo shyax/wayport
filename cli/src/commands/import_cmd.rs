@@ -1,5 +1,5 @@
-use wayport_core::{config, config_file, database::Database};
 use crate::output;
+use wayport_core::{config, config_file, database::Database};
 
 pub fn run(workspace: &str, file: &str) -> Result<(), String> {
     let path = std::path::Path::new(file);

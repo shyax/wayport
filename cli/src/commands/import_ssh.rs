@@ -1,6 +1,6 @@
-use wayport_core::{config, database::Database, ssh_config, types::ActionSource, history};
-use chrono::Utc;
 use crate::output;
+use chrono::Utc;
+use wayport_core::{config, database::Database, history, ssh_config, types::ActionSource};
 
 pub fn run() -> Result<(), String> {
     let profiles = ssh_config::parse_ssh_config()?;
@@ -12,7 +12,10 @@ pub fn run() -> Result<(), String> {
 
     println!("Found {} host(s) in ~/.ssh/config:\n", profiles.len());
     for p in &profiles {
-        println!("  {}  →  {}@{}:{}", p.name, p.ssh_user, p.bastion_host, p.bastion_port);
+        println!(
+            "  {}  →  {}@{}:{}",
+            p.name, p.ssh_user, p.bastion_host, p.bastion_port
+        );
     }
     println!();
 
@@ -35,11 +38,16 @@ pub fn run() -> Result<(), String> {
 
     if imported > 0 {
         history::record_action(
-            &db, "local", None, "SSH Config",
-            "import", ActionSource::Cli,
+            &db,
+            "local",
+            None,
+            "SSH Config",
+            "import",
+            ActionSource::Cli,
             Some(format!("Imported {} profile(s)", imported)),
             None,
-        ).ok();
+        )
+        .ok();
     }
 
     output::success(&format!("Imported {} profile(s)", imported));

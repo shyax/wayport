@@ -1,6 +1,6 @@
+use crate::output;
 use comfy_table::Cell;
 use wayport_core::{config, database::Database};
-use crate::output;
 
 pub fn run(workspace: &str, limit: u32, source: Option<&str>, json: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
@@ -8,13 +8,19 @@ pub fn run(workspace: &str, limit: u32, source: Option<&str>, json: bool) -> Res
 
     let entries: Vec<_> = if let Some(src) = source {
         let s = src.to_lowercase();
-        entries.into_iter().filter(|e| e.source.to_string() == s).collect()
+        entries
+            .into_iter()
+            .filter(|e| e.source.to_string() == s)
+            .collect()
     } else {
         entries
     };
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&entries).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&entries).unwrap_or_default()
+        );
         return Ok(());
     }
 

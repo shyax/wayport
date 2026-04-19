@@ -19,7 +19,9 @@ pub fn write_pid(profile_id: &str, pid: u32, source: ActionSource) -> Result<(),
     let entry = PidEntry {
         pid,
         source,
-        connected_since: Some(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+        connected_since: Some(
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        ),
     };
     let json = serde_json::to_string(&entry).map_err(|e| e.to_string())?;
     std::fs::write(pid_file_path(profile_id), json).map_err(|e| e.to_string())
@@ -50,7 +52,9 @@ pub fn is_process_alive(pid: u32) -> bool {
     #[cfg(windows)]
     let result = {
         use windows_sys::Win32::Foundation::CloseHandle;
-        use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+        use windows_sys::Win32::System::Threading::{
+            OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        };
         unsafe {
             let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
             if !handle.is_null() {

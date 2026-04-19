@@ -1,10 +1,10 @@
-pub mod types;
+pub mod auth;
+pub mod config;
+pub mod config_file;
 pub mod database;
-pub mod tunnel_manager;
+pub mod history;
+pub mod pid;
 pub mod port_utils;
 pub mod ssh_config;
-pub mod config;
-pub mod pid;
-pub mod auth;
-pub mod history;
-pub mod config_file;
+pub mod tunnel_manager;
+pub mod types;

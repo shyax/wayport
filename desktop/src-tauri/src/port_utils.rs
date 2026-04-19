@@ -87,12 +87,7 @@ pub fn scan_port_range(start: u16, end: u16) -> Result<Vec<PortInfo>, String> {
     }
 
     let output = Command::new("lsof")
-        .args([
-            "-i",
-            &format!(":{}-{}", start, end),
-            "-P",
-            "-n",
-        ])
+        .args(["-i", &format!(":{}-{}", start, end), "-P", "-n"])
         .output()
         .map_err(|e| format!("Failed to run lsof: {}", e))?;
 
@@ -150,15 +145,14 @@ pub fn kill_port(port: u16) -> Result<String, String> {
     Ok(msg)
 }
 
+#[derive(Default)]
 pub struct PortMonitorManager {
     monitors: RwLock<HashMap<u16, Arc<AtomicBool>>>,
 }
 
 impl PortMonitorManager {
     pub fn new() -> Self {
-        Self {
-            monitors: RwLock::new(HashMap::new()),
-        }
+        Self::default()
     }
 }
 
@@ -188,10 +182,13 @@ pub fn start_port_monitor(
             if let Ok(output) = output {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let info = parse_lsof_output(&stdout);
-                let _ = app.emit("port-monitor-update", serde_json::json!({
-                    "port": port,
-                    "connections": info,
-                }));
+                let _ = app.emit(
+                    "port-monitor-update",
+                    serde_json::json!({
+                        "port": port,
+                        "connections": info,
+                    }),
+                );
             }
 
             thread::sleep(Duration::from_secs(2));

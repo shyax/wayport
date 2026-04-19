@@ -1,12 +1,12 @@
 use crate::types::{ConnectionProfile, ForwardingType, TunnelState, TunnelStats, TunnelStatus};
-use std::collections::HashMap;
-use std::process::{Child, Stdio};
-use parking_lot::RwLock;
-use std::net::TcpStream;
-use std::time::Duration;
-use std::thread;
 use chrono::Utc;
+use parking_lot::RwLock;
+use std::collections::HashMap;
+use std::net::TcpStream;
+use std::process::{Child, Stdio};
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 pub struct ManagedTunnel {
     pub profile_id: String,
@@ -19,15 +19,14 @@ pub struct ManagedTunnel {
     pub peak_connections: u32,
 }
 
+#[derive(Default)]
 pub struct TunnelManager {
     tunnels: Arc<RwLock<HashMap<String, ManagedTunnel>>>,
 }
 
 impl TunnelManager {
     pub fn new() -> Self {
-        Self {
-            tunnels: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self::default()
     }
 
     pub fn get_states(&self) -> HashMap<String, TunnelState> {
@@ -111,13 +110,19 @@ impl TunnelManager {
                 let remote_host = profile.remote_host.as_deref().unwrap_or("localhost");
                 let remote_port = profile.remote_port.unwrap_or(22);
                 args.push("-L".to_string());
-                args.push(format!("{}:{}:{}", profile.local_port, remote_host, remote_port));
+                args.push(format!(
+                    "{}:{}:{}",
+                    profile.local_port, remote_host, remote_port
+                ));
             }
             ForwardingType::Remote => {
                 let remote_host = profile.remote_host.as_deref().unwrap_or("localhost");
                 let remote_port = profile.remote_port.unwrap_or(22);
                 args.push("-R".to_string());
-                args.push(format!("{}:{}:{}", profile.local_port, remote_host, remote_port));
+                args.push(format!(
+                    "{}:{}:{}",
+                    profile.local_port, remote_host, remote_port
+                ));
             }
             ForwardingType::Dynamic => {
                 args.push("-D".to_string());
@@ -223,18 +228,15 @@ impl TunnelManager {
                     thread::spawn(move || {
                         use std::io::{BufRead, BufReader};
                         let reader = BufReader::new(stderr);
-                        for line in reader.lines() {
-                            if let Ok(line) = line {
-                                let mut tunnels = stderr_tunnels.write();
-                                if let Some(tunnel) = tunnels.get_mut(&stderr_profile_id) {
-                                    tunnel.logs.push(line);
-                                    // Keep last 200 lines
-                                    if tunnel.logs.len() > 200 {
-                                        tunnel.logs.drain(0..tunnel.logs.len() - 200);
-                                    }
-                                } else {
-                                    break;
+                        for line in reader.lines().map_while(Result::ok) {
+                            let mut tunnels = stderr_tunnels.write();
+                            if let Some(tunnel) = tunnels.get_mut(&stderr_profile_id) {
+                                tunnel.logs.push(line);
+                                if tunnel.logs.len() > 200 {
+                                    tunnel.logs.drain(0..tunnel.logs.len() - 200);
                                 }
+                            } else {
+                                break;
                             }
                         }
                     });
@@ -263,7 +265,8 @@ impl TunnelManager {
                     // Read any captured stderr for a better error message
                     let stderr_msg = {
                         let tunnels = tunnels.read();
-                        tunnels.get(&profile.id)
+                        tunnels
+                            .get(&profile.id)
                             .and_then(|t| t.logs.last().cloned())
                             .unwrap_or_default()
                     };
@@ -325,7 +328,14 @@ impl TunnelManager {
     fn count_port_connections(port: u16) -> u32 {
         // Use lsof to count ESTABLISHED connections on the port
         let output = std::process::Command::new("lsof")
-            .args(["-i", &format!("TCP:{}", port), "-s", "TCP:ESTABLISHED", "-P", "-n"])
+            .args([
+                "-i",
+                &format!("TCP:{}", port),
+                "-s",
+                "TCP:ESTABLISHED",
+                "-P",
+                "-n",
+            ])
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .output();
@@ -335,7 +345,11 @@ impl TunnelManager {
                 let stdout = String::from_utf8_lossy(&out.stdout);
                 // Subtract 1 for the header line, minimum 0
                 let lines = stdout.lines().count();
-                if lines > 1 { (lines - 1) as u32 } else { 0 }
+                if lines > 1 {
+                    (lines - 1) as u32
+                } else {
+                    0
+                }
             }
             Err(_) => 0,
         }
@@ -358,7 +372,10 @@ impl TunnelManager {
             }
             tunnel.peak_connections = active;
 
-            let uptime_secs = tunnel.state.connected_since.as_ref()
+            let uptime_secs = tunnel
+                .state
+                .connected_since
+                .as_ref()
                 .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                 .map(|dt| (Utc::now() - dt.with_timezone(&Utc)).num_seconds().max(0) as u64)
                 .unwrap_or(0);

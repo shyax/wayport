@@ -150,14 +150,20 @@ fn main() {
         Commands::Status { verbose } => commands::status::run(json, verbose),
         Commands::Scan { port } => commands::scan::run(&port, json),
         Commands::Kill { port } => commands::kill::run(port),
-        Commands::History { limit, source } => commands::history::run(workspace, limit, source.as_deref(), json),
+        Commands::History { limit, source } => {
+            commands::history::run(workspace, limit, source.as_deref(), json)
+        }
         Commands::Logs { name } => commands::logs::run(workspace, &name),
         Commands::ImportSsh => commands::import_ssh::run(),
-        Commands::Export { output, format } => commands::export::run(workspace, output.as_deref(), &format),
+        Commands::Export { output, format } => {
+            commands::export::run(workspace, output.as_deref(), &format)
+        }
         Commands::Import { file } => commands::import_cmd::run(workspace, &file),
         Commands::Group { action } => match action {
             GroupAction::Ls => commands::group::list(workspace, json),
-            GroupAction::Create { name, profiles } => commands::group::create(workspace, &name, &profiles),
+            GroupAction::Create { name, profiles } => {
+                commands::group::create(workspace, &name, &profiles)
+            }
             GroupAction::Delete { name } => commands::group::delete(workspace, &name),
             GroupAction::Connect { name } => commands::group::connect(workspace, &name),
             GroupAction::Disconnect { name } => commands::group::disconnect(workspace, &name),

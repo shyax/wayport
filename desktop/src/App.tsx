@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useCallback, useState, useRef } from "react";
 import { Sidebar, type SidebarView } from "./components/Sidebar";
 import { ConnectionDetail } from "./components/ConnectionDetail";
 import { ConnectionForm } from "./components/ConnectionForm";
@@ -120,51 +120,6 @@ export default function App() {
     };
   }, []);
 
-  // Keep a ref for tunnelStates so the keyboard handler doesn't churn every poll
-  const tunnelStatesRef = useRef(tunnelStates);
-  tunnelStatesRef.current = tunnelStates;
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const meta = e.metaKey || e.ctrlKey;
-
-      // Cmd+N: New connection
-      if (meta && e.key === "n") {
-        e.preventDefault();
-        showCreateForm();
-        setCurrentView("connections");
-      }
-
-      // Cmd+K: Open command palette
-      if (meta && e.key === "k") {
-        e.preventDefault();
-        setPaletteOpen((prev) => !prev);
-      }
-
-      // Cmd+Shift+D: Disconnect all
-      if (meta && e.shiftKey && e.key === "d") {
-        e.preventDefault();
-        handleStopAll();
-      }
-
-      // Enter to connect selected (when not in form)
-      if (e.key === "Enter" && !showForm && selectedId) {
-        const target = e.target as HTMLElement;
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "BUTTON") {
-          e.preventDefault();
-          const state = tunnelStatesRef.current[selectedId];
-          if (!state || state.status === "disconnected" || state.status === "error") {
-            handleConnect(selectedId);
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [showForm, selectedId]);
-
   const selectedProfile = profiles.find((p) => p.id === selectedId);
   const selectedTunnelState = selectedId ? tunnelStates[selectedId] : undefined;
 
@@ -238,9 +193,50 @@ export default function App() {
     setTunnelStates({});
   }, [setTunnelStates]);
 
+  // Keep a ref for tunnelStates so the keyboard handler doesn't churn every poll
+  const tunnelStatesRef = useRef(tunnelStates);
+  useLayoutEffect(() => { tunnelStatesRef.current = tunnelStates; }, [tunnelStates]);
+
+  // Keyboard shortcuts — declared after handleConnect/handleStopAll to satisfy no-use-before-define
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+
+      if (meta && e.key === "n") {
+        e.preventDefault();
+        showCreateForm();
+        setCurrentView("connections");
+      }
+
+      if (meta && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+
+      if (meta && e.shiftKey && e.key === "d") {
+        e.preventDefault();
+        handleStopAll();
+      }
+
+      if (e.key === "Enter" && !showForm && selectedId) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && target.tagName !== "BUTTON") {
+          e.preventDefault();
+          const state = tunnelStatesRef.current[selectedId];
+          if (!state || state.status === "disconnected" || state.status === "error") {
+            handleConnect(selectedId);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showForm, selectedId, handleConnect, handleStopAll]);
+
   const handleDuplicate = useCallback(
     async (profile: ConnectionProfile) => {
-      const { id, created_at, updated_at, version, ...rest } = profile;
+      const { id: _id, created_at: _created_at, updated_at: _updated_at, version: _version, ...rest } = profile;
       const duplicate: NewConnectionProfile = {
         ...rest,
         name: `${profile.name} (copy)`,

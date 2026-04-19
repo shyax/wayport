@@ -20,7 +20,12 @@ pub fn parse_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
 
     let home_str = home.to_string_lossy().to_string();
 
-    let flush = |host: &str, user: &str, hostname: &str, port: u16, identity: &str| -> Option<ConnectionProfile> {
+    let flush = |host: &str,
+                 user: &str,
+                 hostname: &str,
+                 port: u16,
+                 identity: &str|
+     -> Option<ConnectionProfile> {
         if host.is_empty() || host == "*" || hostname.is_empty() {
             return None;
         }
@@ -28,7 +33,11 @@ pub fn parse_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             id: String::new(),
             name: host.to_string(),
             forwarding_type: ForwardingType::Local,
-            ssh_user: if user.is_empty() { "root".to_string() } else { user.to_string() },
+            ssh_user: if user.is_empty() {
+                "root".to_string()
+            } else {
+                user.to_string()
+            },
             bastion_host: hostname.to_string(),
             bastion_port: port,
             identity_file: identity.to_string(),
@@ -69,7 +78,13 @@ pub fn parse_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
         match key.as_str() {
             "host" => {
                 if let Some(ref host) = current_host {
-                    if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+                    if let Some(profile) = flush(
+                        host,
+                        &current_user,
+                        &current_hostname,
+                        current_port,
+                        &current_identity,
+                    ) {
                         profiles.push(profile);
                     }
                 }
@@ -88,7 +103,13 @@ pub fn parse_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
     }
 
     if let Some(ref host) = current_host {
-        if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+        if let Some(profile) = flush(
+            host,
+            &current_user,
+            &current_hostname,
+            current_port,
+            &current_identity,
+        ) {
             profiles.push(profile);
         }
     }

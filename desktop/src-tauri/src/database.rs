@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use parking_lot::Mutex;
-use rusqlite::{Connection, params};
 use chrono::Utc;
+use parking_lot::Mutex;
+use rusqlite::{params, Connection};
+use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::types::{
@@ -108,7 +108,8 @@ impl Database {
             .expect("Failed to set PRAGMAs");
 
         // Run schema migrations.
-        conn.execute_batch(MIGRATIONS).expect("Failed to run migrations");
+        conn.execute_batch(MIGRATIONS)
+            .expect("Failed to run migrations");
 
         // Create tunnel_groups table if missing (migration for existing DBs).
         conn.execute_batch(
@@ -120,8 +121,9 @@ impl Database {
                 sort_order   INTEGER NOT NULL DEFAULT 0,
                 created_at   TEXT NOT NULL,
                 updated_at   TEXT NOT NULL
-            )"
-        ).expect("Failed to create tunnel_groups table");
+            )",
+        )
+        .expect("Failed to create tunnel_groups table");
 
         // Add k8s columns to connection_profiles if missing.
         for col in &[
@@ -131,15 +133,14 @@ impl Database {
             ("k8s_resource_port", "INTEGER"),
             ("is_pinned", "INTEGER DEFAULT 0"),
         ] {
-            let _ = conn.execute_batch(
-                &format!("ALTER TABLE connection_profiles ADD COLUMN {} {}", col.0, col.1),
-            );
+            let _ = conn.execute_batch(&format!(
+                "ALTER TABLE connection_profiles ADD COLUMN {} {}",
+                col.0, col.1
+            ));
         }
 
         // Add color column to environments if missing.
-        let _ = conn.execute_batch(
-            "ALTER TABLE environments ADD COLUMN color TEXT",
-        );
+        let _ = conn.execute_batch("ALTER TABLE environments ADD COLUMN color TEXT");
 
         let db = Self {
             conn: Mutex::new(conn),
@@ -333,26 +334,37 @@ impl Database {
         })
         .expect("query failed")
         .filter_map(|r| r.ok())
-        .map(|(id, ws_id, name, variables_json, sort_order, is_default, created_at, updated_at, color)| {
-            let variables = serde_json::from_str(&variables_json).unwrap_or_default();
-            Environment {
+        .map(
+            |(
                 id,
-                workspace_id: ws_id,
+                ws_id,
                 name,
-                variables,
-                color,
+                variables_json,
                 sort_order,
-                is_default: is_default != 0,
+                is_default,
                 created_at,
                 updated_at,
-            }
-        })
+                color,
+            )| {
+                let variables = serde_json::from_str(&variables_json).unwrap_or_default();
+                Environment {
+                    id,
+                    workspace_id: ws_id,
+                    name,
+                    variables,
+                    color,
+                    sort_order,
+                    is_default: is_default != 0,
+                    created_at,
+                    updated_at,
+                }
+            },
+        )
         .collect()
     }
 
     pub fn create_environment(&self, env: &Environment) -> Result<(), String> {
-        let variables_json =
-            serde_json::to_string(&env.variables).map_err(|e| e.to_string())?;
+        let variables_json = serde_json::to_string(&env.variables).map_err(|e| e.to_string())?;
         let conn = self.conn.lock();
         conn.execute(
             "INSERT INTO environments (id, workspace_id, name, variables, sort_order, is_default, created_at, updated_at, color) \
@@ -374,8 +386,7 @@ impl Database {
     }
 
     pub fn update_environment(&self, env: &Environment) -> Result<(), String> {
-        let variables_json =
-            serde_json::to_string(&env.variables).map_err(|e| e.to_string())?;
+        let variables_json = serde_json::to_string(&env.variables).map_err(|e| e.to_string())?;
         let conn = self.conn.lock();
         conn.execute(
             "UPDATE environments SET workspace_id=?1, name=?2, variables=?3, sort_order=?4, is_default=?5, updated_at=?6, color=?7 \
@@ -421,12 +432,10 @@ impl Database {
             )
             .expect("prepare failed");
 
-        stmt.query_map(params![workspace_id], |row| {
-            Ok(read_profile_row(row)?)
-        })
-        .expect("query failed")
-        .filter_map(|r| r.ok())
-        .collect()
+        stmt.query_map(params![workspace_id], read_profile_row)
+            .expect("query failed")
+            .filter_map(|r| r.ok())
+            .collect()
     }
 
     pub fn get_profile(&self, id: &str) -> Option<ConnectionProfile> {
@@ -440,9 +449,7 @@ impl Database {
                     COALESCE(is_pinned, 0) as is_pinned \
              FROM connection_profiles WHERE id = ?1",
             params![id],
-            |row| {
-                Ok(read_profile_row(row)?)
-            },
+            read_profile_row,
         )
         .ok()
     }
@@ -655,23 +662,27 @@ impl Database {
         })
         .expect("query failed")
         .filter_map(|r| r.ok())
-        .map(|(id, ws_id, name, profile_ids_json, sort_order, created_at, updated_at)| {
-            let profile_ids: Vec<String> = serde_json::from_str(&profile_ids_json).unwrap_or_default();
-            TunnelGroup {
-                id,
-                workspace_id: ws_id,
-                name,
-                profile_ids,
-                sort_order,
-                created_at,
-                updated_at,
-            }
-        })
+        .map(
+            |(id, ws_id, name, profile_ids_json, sort_order, created_at, updated_at)| {
+                let profile_ids: Vec<String> =
+                    serde_json::from_str(&profile_ids_json).unwrap_or_default();
+                TunnelGroup {
+                    id,
+                    workspace_id: ws_id,
+                    name,
+                    profile_ids,
+                    sort_order,
+                    created_at,
+                    updated_at,
+                }
+            },
+        )
         .collect()
     }
 
     pub fn create_group(&self, group: &TunnelGroup) -> Result<(), String> {
-        let profile_ids_json = serde_json::to_string(&group.profile_ids).map_err(|e| e.to_string())?;
+        let profile_ids_json =
+            serde_json::to_string(&group.profile_ids).map_err(|e| e.to_string())?;
         let conn = self.conn.lock();
         conn.execute(
             "INSERT INTO tunnel_groups (id, workspace_id, name, profile_ids, sort_order, created_at, updated_at) \
@@ -691,7 +702,8 @@ impl Database {
     }
 
     pub fn update_group(&self, group: &TunnelGroup) -> Result<(), String> {
-        let profile_ids_json = serde_json::to_string(&group.profile_ids).map_err(|e| e.to_string())?;
+        let profile_ids_json =
+            serde_json::to_string(&group.profile_ids).map_err(|e| e.to_string())?;
         let conn = self.conn.lock();
         conn.execute(
             "UPDATE tunnel_groups SET workspace_id=?1, name=?2, profile_ids=?3, sort_order=?4, updated_at=?5 \
@@ -763,7 +775,6 @@ impl Database {
             }
         }
     }
-
 }
 
 // ---------------------------------------------------------------------------

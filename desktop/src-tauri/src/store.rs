@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use crate::database::Database;
 use crate::types::{ConnectionProfile, StoreConfig};
+use std::path::PathBuf;
 
 pub struct Store {
     db: Database,
@@ -12,7 +12,10 @@ impl Store {
         std::fs::create_dir_all(&config_dir).ok();
         let db_path = config_dir.join("wayport.db");
         let db = Database::new(db_path);
-        let store = Self { db, config_dir: config_dir.clone() };
+        let store = Self {
+            db,
+            config_dir: config_dir.clone(),
+        };
         store.migrate_from_json();
         store
     }
@@ -64,7 +67,10 @@ impl Store {
         self.db.get_profiles("local")
     }
 
-    pub fn save_profiles(&self, profiles: Vec<ConnectionProfile>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_profiles(
+        &self,
+        profiles: Vec<ConnectionProfile>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Compute current DB ids so we can detect deletions.
         let existing_ids: std::collections::HashSet<String> = self
             .db
@@ -73,30 +79,28 @@ impl Store {
             .map(|p| p.id.clone())
             .collect();
 
-        let new_ids: std::collections::HashSet<String> = profiles
-            .iter()
-            .map(|p| p.id.clone())
-            .collect();
+        let new_ids: std::collections::HashSet<String> =
+            profiles.iter().map(|p| p.id.clone()).collect();
 
         // Delete profiles that are no longer in the list.
         for id in existing_ids.difference(&new_ids) {
-            self.db.delete_profile(id).map_err(|e| {
-                Box::<dyn std::error::Error>::from(e)
-            })?;
+            self.db
+                .delete_profile(id)
+                .map_err(Box::<dyn std::error::Error>::from)?;
         }
 
         // Upsert every profile in the new list.
         for profile in &profiles {
             if new_ids.contains(&profile.id) && !existing_ids.contains(&profile.id) {
                 // Brand new profile.
-                self.db.create_profile(profile).map_err(|e| {
-                    Box::<dyn std::error::Error>::from(e)
-                })?;
+                self.db
+                    .create_profile(profile)
+                    .map_err(Box::<dyn std::error::Error>::from)?;
             } else {
                 // Existing profile — update it.
-                self.db.update_profile(profile).map_err(|e| {
-                    Box::<dyn std::error::Error>::from(e)
-                })?;
+                self.db
+                    .update_profile(profile)
+                    .map_err(Box::<dyn std::error::Error>::from)?;
             }
         }
 

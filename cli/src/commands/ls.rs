@@ -1,6 +1,6 @@
+use crate::output;
 use comfy_table::Cell;
 use wayport_core::{config, database::Database};
-use crate::output;
 
 pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String> {
     let db = Database::new(config::db_path());
@@ -8,13 +8,19 @@ pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String>
 
     let profiles: Vec<_> = if let Some(tag) = tag {
         let t = tag.to_lowercase();
-        profiles.into_iter().filter(|p| p.tags.iter().any(|pt| pt.to_lowercase() == t)).collect()
+        profiles
+            .into_iter()
+            .filter(|p| p.tags.iter().any(|pt| pt.to_lowercase() == t))
+            .collect()
     } else {
         profiles
     };
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&profiles).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&profiles).unwrap_or_default()
+        );
         return Ok(());
     }
 
@@ -35,7 +41,11 @@ pub fn run(workspace: &str, tag: Option<&str>, json: bool) -> Result<(), String>
             (Some(h), Some(port)) => format!("{}:{}", h, port),
             _ => "-".to_string(),
         };
-        let tags = if p.tags.is_empty() { "-".to_string() } else { p.tags.join(", ") };
+        let tags = if p.tags.is_empty() {
+            "-".to_string()
+        } else {
+            p.tags.join(", ")
+        };
 
         table.add_row(vec![
             Cell::new(&p.name),

@@ -48,7 +48,11 @@ pub fn load_from_file(path: &Path) -> Result<Vec<ConnectionProfile>, String> {
     Ok(config.profiles)
 }
 
-pub fn save_to_file(profiles: &[ConnectionProfile], path: &Path, format: ConfigFormat) -> Result<(), String> {
+pub fn save_to_file(
+    profiles: &[ConnectionProfile],
+    path: &Path,
+    format: ConfigFormat,
+) -> Result<(), String> {
     let config = ConfigFile {
         version: 1,
         profiles: profiles.to_vec(),
@@ -60,6 +64,5 @@ pub fn save_to_file(profiles: &[ConnectionProfile], path: &Path, format: ConfigF
         ConfigFormat::Toml => toml::to_string_pretty(&config).map_err(|e| e.to_string())?,
     };
 
-    std::fs::write(path, content)
-        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))
+    std::fs::write(path, content).map_err(|e| format!("Failed to write {}: {}", path.display(), e))
 }

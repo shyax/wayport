@@ -1,12 +1,14 @@
-use comfy_table::{Cell, Color, Table, ContentArrangement};
+use comfy_table::{Cell, Color, ContentArrangement, Table};
 
 pub fn table(headers: &[&str]) -> Table {
     let mut table = Table::new();
     table.set_content_arrangement(ContentArrangement::Dynamic);
     table.load_preset("                   ");
-    table.set_header(headers.iter().map(|h| {
-        Cell::new(h.to_uppercase()).fg(Color::DarkGrey)
-    }));
+    table.set_header(
+        headers
+            .iter()
+            .map(|h| Cell::new(h.to_uppercase()).fg(Color::DarkGrey)),
+    );
     table
 }
 

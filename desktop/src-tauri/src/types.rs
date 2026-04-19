@@ -1,18 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ForwardingType {
+    #[default]
     Local,
     Remote,
     Dynamic,
     Kubernetes,
-}
-
-impl Default for ForwardingType {
-    fn default() -> Self {
-        ForwardingType::Local
-    }
 }
 
 fn default_true() -> bool {
@@ -121,7 +116,7 @@ pub struct PortInfo {
     pub protocol: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StoreConfig {
     pub profiles: Vec<ConnectionProfile>,
     pub window_bounds: Option<WindowBounds>,
@@ -133,15 +128,6 @@ pub struct WindowBounds {
     pub y: i32,
     pub width: u32,
     pub height: u32,
-}
-
-impl Default for StoreConfig {
-    fn default() -> Self {
-        Self {
-            profiles: Vec::new(),
-            window_bounds: None,
-        }
-    }
 }
 
 // --- New types for SQLite-backed features ---

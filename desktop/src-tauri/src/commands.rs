@@ -1,9 +1,12 @@
-use tauri::{State, AppHandle, Emitter, Manager};
-use uuid::Uuid;
-use chrono::Utc;
-use crate::types::{ConnectionProfile, Environment, Folder, HistoryEntry, TunnelGroup, TunnelState, TunnelStatus, Workspace, ForwardingType};
 use crate::store::Store;
 use crate::tunnel_manager::TunnelManager;
+use crate::types::{
+    ConnectionProfile, Environment, Folder, ForwardingType, HistoryEntry, TunnelGroup, TunnelState,
+    TunnelStatus, Workspace,
+};
+use chrono::Utc;
+use tauri::{AppHandle, Emitter, Manager, State};
+use uuid::Uuid;
 
 /// Send a desktop notification if the user has notifications enabled.
 fn send_notification(app: &AppHandle, title: &str, body: &str) {
@@ -20,11 +23,7 @@ fn send_notification(app: &AppHandle, title: &str, body: &str) {
     }
 
     use tauri_plugin_notification::NotificationExt;
-    let _ = app.notification()
-        .builder()
-        .title(title)
-        .body(body)
-        .show();
+    let _ = app.notification().builder().title(title).body(body).show();
 }
 
 /// Update the system tray tooltip with the current active tunnel count.
@@ -32,7 +31,8 @@ pub fn update_tray_tooltip(app: &AppHandle) {
     let tm = app.state::<TunnelManager>();
     let states = tm.get_states();
 
-    let mut active = states.values()
+    let mut active = states
+        .values()
         .filter(|s| s.status == TunnelStatus::Connected)
         .count();
 
@@ -88,17 +88,16 @@ pub fn update_profile(
 }
 
 #[tauri::command]
-pub fn delete_profile(id: String, store: State<Store>, tunnel_manager: State<TunnelManager>) -> Result<(), String> {
+pub fn delete_profile(
+    id: String,
+    store: State<Store>,
+    tunnel_manager: State<TunnelManager>,
+) -> Result<(), String> {
     tunnel_manager.stop_tunnel(&id);
     let profiles = store.get_profiles();
-    let profiles = profiles
-        .into_iter()
-        .filter(|p| p.id != id)
-        .collect();
+    let profiles = profiles.into_iter().filter(|p| p.id != id).collect();
 
-    store
-        .save_profiles(profiles)
-        .map_err(|e| e.to_string())
+    store.save_profiles(profiles).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -112,8 +111,14 @@ pub fn unpin_profile(profile_id: String, store: State<Store>) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub fn get_recent_profiles(workspace_id: String, limit: usize, store: State<Store>) -> Result<Vec<String>, String> {
-    Ok(store.database().get_recent_profile_ids(&workspace_id, limit))
+pub fn get_recent_profiles(
+    workspace_id: String,
+    limit: usize,
+    store: State<Store>,
+) -> Result<Vec<String>, String> {
+    Ok(store
+        .database()
+        .get_recent_profile_ids(&workspace_id, limit))
 }
 
 #[tauri::command]
@@ -174,7 +179,10 @@ pub fn start_tunnel(
     Ok(())
 }
 
-fn apply_env_vars(mut profile: ConnectionProfile, vars: &std::collections::HashMap<String, String>) -> ConnectionProfile {
+fn apply_env_vars(
+    mut profile: ConnectionProfile,
+    vars: &std::collections::HashMap<String, String>,
+) -> ConnectionProfile {
     let sub = |s: &str| -> String {
         let mut result = s.to_string();
         for (key, value) in vars {
@@ -197,40 +205,56 @@ fn apply_env_vars(mut profile: ConnectionProfile, vars: &std::collections::HashM
 }
 
 #[tauri::command]
-pub fn stop_tunnel(profile_id: String, tunnel_manager: State<TunnelManager>, app: AppHandle) -> Result<(), String> {
+pub fn stop_tunnel(
+    profile_id: String,
+    tunnel_manager: State<TunnelManager>,
+    app: AppHandle,
+) -> Result<(), String> {
     tunnel_manager.stop_tunnel(&profile_id);
-    let _ = app.emit("tunnel-state-update", crate::types::TunnelState {
-        profile_id,
-        status: crate::types::TunnelStatus::Disconnected,
-        error: None,
-        connected_since: None,
-        reconnect_attempt: 0,
-    });
+    let _ = app.emit(
+        "tunnel-state-update",
+        crate::types::TunnelState {
+            profile_id,
+            status: crate::types::TunnelStatus::Disconnected,
+            error: None,
+            connected_since: None,
+            reconnect_attempt: 0,
+        },
+    );
     update_tray_tooltip(&app);
     Ok(())
 }
 
 #[tauri::command]
-pub fn stop_all_tunnels(tunnel_manager: State<TunnelManager>, app: AppHandle) -> Result<(), String> {
+pub fn stop_all_tunnels(
+    tunnel_manager: State<TunnelManager>,
+    app: AppHandle,
+) -> Result<(), String> {
     tunnel_manager.stop_all_tunnels();
     update_tray_tooltip(&app);
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -> std::collections::HashMap<String, TunnelState> {
+pub fn get_tunnel_states(
+    tunnel_manager: State<TunnelManager>,
+    app: AppHandle,
+) -> std::collections::HashMap<String, TunnelState> {
     let mut states = tunnel_manager.get_states();
 
     // Merge in CLI-started tunnels from PID files
     for (profile_id, _pid, _source, _connected_since) in wayport_core::pid::list_active_tunnels() {
         if !states.contains_key(&profile_id) {
-            states.insert(profile_id.clone(), crate::types::TunnelState {
-                profile_id,
-                status: crate::types::TunnelStatus::Connected,
-                error: None,
-                connected_since: None,
-                reconnect_attempt: 0,
-            });
+            states.insert(
+                profile_id.clone(),
+                crate::types::TunnelState {
+                    profile_id,
+                    status: crate::types::TunnelStatus::Connected,
+                    error: None,
+                    connected_since: None,
+                    reconnect_attempt: 0,
+                },
+            );
         }
     }
 
@@ -248,7 +272,8 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -
     });
 
     // Keep tray tooltip in sync on every poll
-    let active = states.values()
+    let active = states
+        .values()
         .filter(|s| s.status == TunnelStatus::Connected)
         .count();
     if let Some(tray) = app.tray_by_id("main-tray") {
@@ -275,10 +300,7 @@ pub fn get_tunnel_stats(tunnel_manager: State<TunnelManager>) -> Vec<crate::type
 
 #[tauri::command]
 pub fn check_ssh() -> Result<std::collections::HashMap<String, String>, String> {
-    match std::process::Command::new("ssh")
-        .arg("-V")
-        .output()
-    {
+    match std::process::Command::new("ssh").arg("-V").output() {
         Ok(output) => {
             let version = String::from_utf8_lossy(&output.stderr).to_string();
             let mut result = std::collections::HashMap::new();
@@ -296,7 +318,10 @@ pub fn check_ssh() -> Result<std::collections::HashMap<String, String>, String> 
 }
 
 #[tauri::command]
-pub async fn export_profiles(store: State<'_, Store>, format: Option<String>) -> Result<String, String> {
+pub async fn export_profiles(
+    store: State<'_, Store>,
+    format: Option<String>,
+) -> Result<String, String> {
     use wayport_core::config_file::{self, ConfigFormat};
 
     let desktop_profiles = store.get_profiles();
@@ -338,15 +363,13 @@ pub async fn import_profiles(store: State<'_, Store>) -> Result<u32, String> {
         return Err("No wayport-config.json found in Downloads folder".to_string());
     }
 
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| e.to_string())?;
+    let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
 
-    let import_data: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| e.to_string())?;
+    let import_data: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    let imported_profiles: Vec<ConnectionProfile> = serde_json::from_value(
-        import_data["profiles"].clone()
-    ).map_err(|e| e.to_string())?;
+    let imported_profiles: Vec<ConnectionProfile> =
+        serde_json::from_value(import_data["profiles"].clone()).map_err(|e| e.to_string())?;
 
     let mut profiles = store.get_profiles();
     let mut imported_count = 0;
@@ -358,9 +381,7 @@ pub async fn import_profiles(store: State<'_, Store>) -> Result<u32, String> {
         }
     }
 
-    store
-        .save_profiles(profiles)
-        .map_err(|e| e.to_string())?;
+    store.save_profiles(profiles).map_err(|e| e.to_string())?;
 
     Ok(imported_count)
 }
@@ -417,7 +438,10 @@ pub fn list_environments(workspace_id: String, store: State<Store>) -> Vec<Envir
 }
 
 #[tauri::command]
-pub fn create_environment(environment: Environment, store: State<Store>) -> Result<Environment, String> {
+pub fn create_environment(
+    environment: Environment,
+    store: State<Store>,
+) -> Result<Environment, String> {
     let mut env = environment;
     env.id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -428,7 +452,10 @@ pub fn create_environment(environment: Environment, store: State<Store>) -> Resu
 }
 
 #[tauri::command]
-pub fn update_environment(environment: Environment, store: State<Store>) -> Result<Environment, String> {
+pub fn update_environment(
+    environment: Environment,
+    store: State<Store>,
+) -> Result<Environment, String> {
     let mut env = environment;
     env.updated_at = Utc::now().to_rfc3339();
     store.database().update_environment(&env)?;
@@ -445,8 +472,14 @@ pub fn delete_environment(id: String, store: State<Store>) -> Result<(), String>
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn get_history(workspace_id: String, limit: Option<u32>, store: State<Store>) -> Vec<HistoryEntry> {
-    store.database().get_history(&workspace_id, limit.unwrap_or(100))
+pub fn get_history(
+    workspace_id: String,
+    limit: Option<u32>,
+    store: State<Store>,
+) -> Vec<HistoryEntry> {
+    store
+        .database()
+        .get_history(&workspace_id, limit.unwrap_or(100))
 }
 
 #[tauri::command]
@@ -517,7 +550,8 @@ pub fn start_group(
     app: AppHandle,
 ) -> Result<(), String> {
     let groups = store.database().get_groups("local");
-    let group = groups.into_iter()
+    let group = groups
+        .into_iter()
         .find(|g| g.id == group_id)
         .ok_or("Group not found")?;
 
@@ -540,11 +574,19 @@ pub fn start_group(
 
                 match state.status {
                     TunnelStatus::Connected => {
-                        send_notification(&app_clone, "Tunnel Connected", &format!("{} on port {}", profile_name, local_port));
+                        send_notification(
+                            &app_clone,
+                            "Tunnel Connected",
+                            &format!("{} on port {}", profile_name, local_port),
+                        );
                     }
                     TunnelStatus::Error => {
                         let msg = state.error.as_deref().unwrap_or("Unknown error");
-                        send_notification(&app_clone, "Tunnel Failed", &format!("{}: {}", profile_name, msg));
+                        send_notification(
+                            &app_clone,
+                            "Tunnel Failed",
+                            &format!("{}: {}", profile_name, msg),
+                        );
                     }
                     _ => {}
                 }
@@ -563,19 +605,23 @@ pub fn stop_group(
     app: AppHandle,
 ) -> Result<(), String> {
     let groups = store.database().get_groups("local");
-    let group = groups.into_iter()
+    let group = groups
+        .into_iter()
         .find(|g| g.id == group_id)
         .ok_or("Group not found")?;
 
     for pid in &group.profile_ids {
         tunnel_manager.stop_tunnel(pid);
-        let _ = app.emit("tunnel-state-update", crate::types::TunnelState {
-            profile_id: pid.to_string(),
-            status: crate::types::TunnelStatus::Disconnected,
-            error: None,
-            connected_since: None,
-            reconnect_attempt: 0,
-        });
+        let _ = app.emit(
+            "tunnel-state-update",
+            crate::types::TunnelState {
+                profile_id: pid.to_string(),
+                status: crate::types::TunnelStatus::Disconnected,
+                error: None,
+                connected_since: None,
+                reconnect_attempt: 0,
+            },
+        );
     }
     update_tray_tooltip(&app);
     Ok(())
@@ -588,9 +634,7 @@ pub fn stop_group(
 #[tauri::command]
 pub fn get_autostart_enabled(app: AppHandle) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
-    app.autolaunch()
-        .is_enabled()
-        .map_err(|e| e.to_string())
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -631,13 +675,24 @@ pub fn list_ssh_keys() -> Vec<SshKeyInfo> {
     if let Ok(entries) = std::fs::read_dir(&ssh_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.is_file() { continue; }
+            if !path.is_file() {
+                continue;
+            }
 
-            let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let name = path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
 
             // Skip public keys, config files, known_hosts, etc.
-            if name.ends_with(".pub") || name == "config" || name == "known_hosts"
-               || name == "known_hosts.old" || name == "authorized_keys" || name.starts_with('.') {
+            if name.ends_with(".pub")
+                || name == "config"
+                || name == "known_hosts"
+                || name == "known_hosts.old"
+                || name == "authorized_keys"
+                || name.starts_with('.')
+            {
                 continue;
             }
 
@@ -657,9 +712,15 @@ pub fn list_ssh_keys() -> Vec<SshKeyInfo> {
                     "Unknown"
                 };
 
-                let pub_path = path.with_extension(format!("{}.pub", path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_default()));
+                let pub_path = path.with_extension(format!(
+                    "{}.pub",
+                    path.extension()
+                        .map(|e| e.to_string_lossy().to_string())
+                        .unwrap_or_default()
+                ));
                 // Also check for name.pub
-                let pub_exists = pub_path.exists() || ssh_dir.join(format!("{}.pub", name)).exists();
+                let pub_exists =
+                    pub_path.exists() || ssh_dir.join(format!("{}.pub", name)).exists();
 
                 keys.push(SshKeyInfo {
                     name,
@@ -677,7 +738,9 @@ pub fn list_ssh_keys() -> Vec<SshKeyInfo> {
 
 #[tauri::command]
 pub fn get_public_key(name: String) -> Result<String, String> {
-    let ssh_dir = dirs::home_dir().ok_or("Cannot find home directory")?.join(".ssh");
+    let ssh_dir = dirs::home_dir()
+        .ok_or("Cannot find home directory")?
+        .join(".ssh");
     let pub_path = ssh_dir.join(format!("{}.pub", name));
 
     if !pub_path.exists() {
@@ -689,7 +752,9 @@ pub fn get_public_key(name: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn generate_ssh_key(name: String, key_type: String) -> Result<String, String> {
-    let ssh_dir = dirs::home_dir().ok_or("Cannot find home directory")?.join(".ssh");
+    let ssh_dir = dirs::home_dir()
+        .ok_or("Cannot find home directory")?
+        .join(".ssh");
     std::fs::create_dir_all(&ssh_dir).map_err(|e| e.to_string())?;
 
     let key_path = ssh_dir.join(&name);
@@ -739,7 +804,12 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
     let mut current_port: u16 = 22;
     let mut current_identity = String::new();
 
-    let flush = |host: &str, user: &str, hostname: &str, port: u16, identity: &str| -> Option<ConnectionProfile> {
+    let flush = |host: &str,
+                 user: &str,
+                 hostname: &str,
+                 port: u16,
+                 identity: &str|
+     -> Option<ConnectionProfile> {
         if host.is_empty() || host == "*" || hostname.is_empty() {
             return None;
         }
@@ -747,7 +817,11 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             id: String::new(),
             name: host.to_string(),
             forwarding_type: ForwardingType::Local,
-            ssh_user: if user.is_empty() { "root".to_string() } else { user.to_string() },
+            ssh_user: if user.is_empty() {
+                "root".to_string()
+            } else {
+                user.to_string()
+            },
             bastion_host: hostname.to_string(),
             bastion_port: port,
             identity_file: identity.to_string(),
@@ -789,7 +863,13 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             "host" => {
                 // Flush previous host
                 if let Some(ref host) = current_host {
-                    if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+                    if let Some(profile) = flush(
+                        host,
+                        &current_user,
+                        &current_hostname,
+                        current_port,
+                        &current_identity,
+                    ) {
                         profiles.push(profile);
                     }
                 }
@@ -802,14 +882,27 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
             "hostname" => current_hostname = value,
             "user" => current_user = value,
             "port" => current_port = value.parse().unwrap_or(22),
-            "identityfile" => current_identity = value.replace("~", &dirs::home_dir().map(|h| h.to_string_lossy().to_string()).unwrap_or_default()),
+            "identityfile" => {
+                current_identity = value.replace(
+                    "~",
+                    &dirs::home_dir()
+                        .map(|h| h.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+                )
+            }
             _ => {}
         }
     }
 
     // Flush last host
     if let Some(ref host) = current_host {
-        if let Some(profile) = flush(host, &current_user, &current_hostname, current_port, &current_identity) {
+        if let Some(profile) = flush(
+            host,
+            &current_user,
+            &current_hostname,
+            current_port,
+            &current_identity,
+        ) {
             profiles.push(profile);
         }
     }
@@ -822,9 +915,16 @@ pub fn import_ssh_config() -> Result<Vec<ConnectionProfile>, String> {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub async fn open_terminal(profile_id: String, env_vars: Option<std::collections::HashMap<String, String>>, store: State<'_, Store>) -> Result<(), String> {
+pub async fn open_terminal(
+    profile_id: String,
+    env_vars: Option<std::collections::HashMap<String, String>>,
+    store: State<'_, Store>,
+) -> Result<(), String> {
     let profiles = store.get_profiles();
-    let profile = profiles.into_iter().find(|p| p.id == profile_id).ok_or("Profile not found")?;
+    let profile = profiles
+        .into_iter()
+        .find(|p| p.id == profile_id)
+        .ok_or("Profile not found")?;
 
     let profile = if let Some(vars) = env_vars {
         apply_env_vars(profile, &vars)
@@ -838,7 +938,9 @@ pub async fn open_terminal(profile_id: String, env_vars: Option<std::collections
         ssh_args.push(profile.identity_file.clone());
     }
     if !profile.jump_hosts.is_empty() {
-        let jumps: Vec<String> = profile.jump_hosts.iter()
+        let jumps: Vec<String> = profile
+            .jump_hosts
+            .iter()
             .map(|jh| format!("{}@{}:{}", jh.user, jh.host, jh.port))
             .collect();
         ssh_args.push("-J".to_string());
@@ -853,7 +955,10 @@ pub async fn open_terminal(profile_id: String, env_vars: Option<std::collections
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("osascript")
-            .args(["-e", &format!("tell application \"Terminal\" to do script \"{}\"", ssh_cmd)])
+            .args([
+                "-e",
+                &format!("tell application \"Terminal\" to do script \"{}\"", ssh_cmd),
+            ])
             .args(["-e", "tell application \"Terminal\" to activate"])
             .spawn()
             .map_err(|e| format!("Failed to open Terminal: {}", e))?;
@@ -874,11 +979,20 @@ pub async fn open_terminal(profile_id: String, env_vars: Option<std::collections
         let mut launched = false;
         for term in &terminals {
             let result = match *term {
-                "gnome-terminal" => std::process::Command::new(term).args(["--", "bash", "-c", &format!("{};exec bash", ssh_cmd)]).spawn(),
-                "konsole" => std::process::Command::new(term).args(["-e", "bash", "-c", &format!("{};exec bash", ssh_cmd)]).spawn(),
-                _ => std::process::Command::new(term).args(["-e", &ssh_cmd]).spawn(),
+                "gnome-terminal" => std::process::Command::new(term)
+                    .args(["--", "bash", "-c", &format!("{};exec bash", ssh_cmd)])
+                    .spawn(),
+                "konsole" => std::process::Command::new(term)
+                    .args(["-e", "bash", "-c", &format!("{};exec bash", ssh_cmd)])
+                    .spawn(),
+                _ => std::process::Command::new(term)
+                    .args(["-e", &ssh_cmd])
+                    .spawn(),
             };
-            if result.is_ok() { launched = true; break; }
+            if result.is_ok() {
+                launched = true;
+                break;
+            }
         }
         if !launched {
             return Err("No supported terminal emulator found".to_string());
@@ -942,10 +1056,14 @@ pub async fn test_connection(
     }
 
     args.extend([
-        "-o".into(), "ConnectTimeout=10".into(),
-        "-o".into(), "BatchMode=yes".into(),
-        "-o".into(), "StrictHostKeyChecking=accept-new".into(),
-        "-p".into(), profile.bastion_port.to_string(),
+        "-o".into(),
+        "ConnectTimeout=10".into(),
+        "-o".into(),
+        "BatchMode=yes".into(),
+        "-o".into(),
+        "StrictHostKeyChecking=accept-new".into(),
+        "-p".into(),
+        profile.bastion_port.to_string(),
         format!("{}@{}", profile.ssh_user, profile.bastion_host),
         "exit".into(),
     ]);
@@ -968,7 +1086,11 @@ pub async fn test_connection(
                 })
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                let msg = stderr.lines().last().unwrap_or("Connection failed").to_string();
+                let msg = stderr
+                    .lines()
+                    .last()
+                    .unwrap_or("Connection failed")
+                    .to_string();
                 Ok(TestConnectionResult {
                     success: false,
                     message: msg,
