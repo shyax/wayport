@@ -3,6 +3,7 @@ use crate::types::{ActionSource, HistoryEntry};
 use chrono::Utc;
 use uuid::Uuid;
 
+#[allow(clippy::too_many_arguments)]
 pub fn record_action(
     db: &Database,
     workspace_id: &str,

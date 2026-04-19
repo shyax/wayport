@@ -53,9 +53,11 @@ export function CommandPalette({
 
   useEffect(() => {
     if (open) {
-      setQuery("");
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => {
+        setQuery("");
+        setSelectedIndex(0);
+        inputRef.current?.focus();
+      }, 50);
     }
   }, [open]);
 
@@ -133,10 +135,6 @@ export function CommandPalette({
     return result;
   }, [query, profiles, tunnelStates, onConnect, onDisconnect, onSelectProfile, onSwitchView, onClose, onNewConnection]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
   // Scroll selected item into view
   useEffect(() => {
     const list = listRef.current;
@@ -198,7 +196,7 @@ export function CommandPalette({
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyDown}
             placeholder="Search tunnels, actions, views..."
             className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none"
