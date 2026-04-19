@@ -31,7 +31,26 @@ pub fn remove_pid(profile_id: &str) {
 }
 
 pub fn is_process_alive(pid: u32) -> bool {
-    unsafe { libc::kill(pid as i32, 0) == 0 }
+    #[cfg(unix)]
+    let result = unsafe { libc::kill(pid as i32, 0) == 0 };
+
+    #[cfg(windows)]
+    let result = {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            if handle != 0 {
+                CloseHandle(handle);
+            }
+            handle != 0
+        }
+    };
+
+    #[cfg(not(any(unix, windows)))]
+    let result = true;
+
+    result
 }
 
 pub fn list_active_tunnels() -> Vec<(String, u32, ActionSource)> {
