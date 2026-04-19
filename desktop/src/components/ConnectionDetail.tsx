@@ -167,10 +167,7 @@ export function ConnectionDetail({
   const isConnected = status === "connected";
 
   useEffect(() => {
-    if (!isConnected) {
-      setStats(null);
-      return;
-    }
+    if (!isConnected) return;
     let cancelled = false;
     const fetchStats = async () => {
       try {
