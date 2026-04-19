@@ -37,7 +37,7 @@ pub fn update_tray_tooltip(app: &AppHandle) {
         .count();
 
     // Count CLI-started tunnels not already tracked by the GUI
-    for (profile_id, pid, _source) in wayport_core::pid::list_active_tunnels() {
+    for (profile_id, pid, _source, _connected_since) in wayport_core::pid::list_active_tunnels() {
         if !states.contains_key(&profile_id) && wayport_core::pid::is_process_alive(pid) {
             active += 1;
         }
@@ -222,7 +222,7 @@ pub fn get_tunnel_states(tunnel_manager: State<TunnelManager>, app: AppHandle) -
     let mut states = tunnel_manager.get_states();
 
     // Merge in CLI-started tunnels from PID files
-    for (profile_id, _pid, _source) in wayport_core::pid::list_active_tunnels() {
+    for (profile_id, _pid, _source, _connected_since) in wayport_core::pid::list_active_tunnels() {
         if !states.contains_key(&profile_id) {
             states.insert(profile_id.clone(), crate::types::TunnelState {
                 profile_id,

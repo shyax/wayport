@@ -48,7 +48,11 @@ enum Commands {
     },
 
     /// Show all active tunnels
-    Status,
+    Status {
+        /// Show uptime column
+        #[arg(short, long)]
+        verbose: bool,
+    },
 
     /// Scan a port for running processes
     Scan {
@@ -143,7 +147,7 @@ fn main() {
         Commands::Ls { tag } => commands::ls::run(workspace, tag.as_deref(), json),
         Commands::Connect { name, detach } => commands::connect::run(workspace, &name, detach),
         Commands::Disconnect { name } => commands::disconnect::run(workspace, &name),
-        Commands::Status => commands::status::run(json),
+        Commands::Status { verbose } => commands::status::run(json, verbose),
         Commands::Scan { port } => commands::scan::run(&port, json),
         Commands::Kill { port } => commands::kill::run(port),
         Commands::History { limit, source } => commands::history::run(workspace, limit, source.as_deref(), json),
